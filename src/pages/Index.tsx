@@ -1,12 +1,130 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Sparkles, Map, FileText, Share2 } from "lucide-react";
+import Header from "@/components/Header";
+import SearchBar from "@/components/SearchBar";
+import FileUpload from "@/components/FileUpload";
+import MapDisplay from "@/components/MapDisplay";
 
 const Index = () => {
+  const [currentPrompt, setCurrentPrompt] = useState("");
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const handleSearch = async (prompt: string) => {
+    setCurrentPrompt(prompt);
+    setIsGenerating(true);
+    
+    // Simulate AI processing time
+    setTimeout(() => {
+      setIsGenerating(false);
+    }, 3000);
+  };
+
+  const handleFilesUploaded = (files: File[]) => {
+    setUploadedFiles(files);
+  };
+
+  const features = [
+    {
+      icon: Sparkles,
+      title: "AI-Powered Generation",
+      description: "Transform natural language into stunning geographic visualizations"
+    },
+    {
+      icon: Map,
+      title: "Multiple Map Types",
+      description: "Points, choropleth, lines, and polygon maps with automated styling"
+    },
+    {
+      icon: FileText,
+      title: "Data Import",
+      description: "Support for Excel, CSV, GeoJSON, GPKG, and KML formats"
+    },
+    {
+      icon: Share2,
+      title: "Easy Export",
+      description: "Export as PDF, image, or shareable interactive web links"
+    }
+  ];
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
+    <div className="min-h-screen bg-gradient-subtle">
+      <Header />
+      
+      <main className="container mx-auto px-4 py-8">
+        {/* Hero Section */}
+        <div className="text-center mb-12">
+          <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-hero bg-clip-text text-transparent">
+            AI Geographic Map Generator
+          </h1>
+          <p className="text-xl text-muted-foreground max-w-3xl mx-auto mb-8">
+            Create beautiful, interactive maps from natural language prompts. 
+            Perfect for data journalists, urban planners, researchers, and public administrations.
+          </p>
+        </div>
+
+        {/* Main Interface */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+          {/* Left Column - Input */}
+          <div className="space-y-8">
+            <Card className="shadow-card">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  Describe Your Map
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <SearchBar onSearch={handleSearch} isLoading={isGenerating} />
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-card">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-primary" />
+                  Upload Geodata
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <FileUpload onFilesUploaded={handleFilesUploaded} />
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Right Column - Map */}
+          <div>
+            <MapDisplay prompt={currentPrompt} isLoading={isGenerating} />
+          </div>
+        </div>
+
+        <Separator className="my-12" />
+
+        {/* Features Section */}
+        <div className="text-center mb-8">
+          <h2 className="text-3xl font-bold mb-4">Powerful Features</h2>
+          <p className="text-muted-foreground max-w-2xl mx-auto">
+            Everything you need to create professional geographic visualizations with AI
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {features.map((feature, index) => {
+            const Icon = feature.icon;
+            return (
+              <Card key={index} className="text-center p-6 shadow-card hover:shadow-ocean transition-all duration-300">
+                <div className="inline-flex p-3 bg-gradient-hero rounded-full mb-4">
+                  <Icon className="h-6 w-6 text-white" />
+                </div>
+                <h3 className="font-semibold mb-2">{feature.title}</h3>
+                <p className="text-sm text-muted-foreground">{feature.description}</p>
+              </Card>
+            );
+          })}
+        </div>
+      </main>
     </div>
   );
 };
