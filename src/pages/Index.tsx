@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Sparkles, Map, FileText, Share2 } from "lucide-react";
-import Header from "@/components/Header";
 import SearchBar from "@/components/SearchBar";
 import FileUpload from "@/components/FileUpload";
 import MapDisplay from "@/components/MapDisplay";
@@ -51,8 +50,6 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gradient-subtle">
-      <Header />
-      
       <main className="container mx-auto px-4 py-8">
         {/* Hero Section */}
         <div className="text-center mb-12">

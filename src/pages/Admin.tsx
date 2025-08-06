@@ -9,7 +9,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Settings, Cpu, Palette, Activity, Save } from "lucide-react";
 import { toast } from "sonner";
-import Header from "@/components/Header";
 
 const Admin = () => {
   const [aiModel, setAiModel] = useState("gpt-4");
@@ -51,8 +50,6 @@ const Admin = () => {
 
   return (
     <div className="min-h-screen bg-gradient-subtle">
-      <Header />
-      
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2 bg-gradient-hero bg-clip-text text-transparent">
