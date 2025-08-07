@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,23 +15,23 @@ const Admin = () => {
   const [aiModel, setAiModel] = useState("gpt-4");
   const [apiKey, setApiKey] = useState("");
   const [templates, setTemplates] = useState([
-    { id: 1, name: "Default Blue", active: true },
-    { id: 2, name: "Ocean Theme", active: false },
-    { id: 3, name: "Terrain Style", active: false }
+    { id: 1, name: "Bleu par défaut", active: true },
+    { id: 2, name: "Thème océan", active: false },
+    { id: 3, name: "Style terrain", active: false }
   ]);
 
   const handleSaveSettings = () => {
-    toast.success("Settings saved successfully!");
+    toast.success("Paramètres sauvegardés avec succès !");
   };
 
   const handleAddTemplate = () => {
     const newTemplate = {
       id: templates.length + 1,
-      name: `Template ${templates.length + 1}`,
+      name: `Modèle ${templates.length + 1}`,
       active: false
     };
     setTemplates([...templates, newTemplate]);
-    toast.success("New template added!");
+    toast.success("Nouveau modèle ajouté !");
   };
 
   const toggleTemplate = (id: number) => {
@@ -53,10 +54,10 @@ const Admin = () => {
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2 bg-gradient-hero bg-clip-text text-transparent">
-            Admin Dashboard
+            Tableau de bord administrateur
           </h1>
           <p className="text-muted-foreground">
-            Manage AI models, templates, and monitor system usage
+            Gérez les modèles IA, les modèles de cartes et surveillez l'utilisation du système
           </p>
         </div>
 
@@ -64,19 +65,19 @@ const Admin = () => {
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="ai-config" className="gap-2">
               <Cpu className="h-4 w-4" />
-              AI Configuration
+              Configuration IA
             </TabsTrigger>
             <TabsTrigger value="templates" className="gap-2">
               <Palette className="h-4 w-4" />
-              Templates
+              Modèles
             </TabsTrigger>
             <TabsTrigger value="analytics" className="gap-2">
               <Activity className="h-4 w-4" />
-              Analytics
+              Analytiques
             </TabsTrigger>
             <TabsTrigger value="settings" className="gap-2">
               <Settings className="h-4 w-4" />
-              Settings
+              Paramètres
             </TabsTrigger>
           </TabsList>
 
@@ -85,16 +86,16 @@ const Admin = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Cpu className="h-5 w-5" />
-                  AI Model Configuration
+                  Configuration du modèle IA
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-3">
-                    <Label htmlFor="ai-model">AI Model</Label>
+                    <Label htmlFor="ai-model">Modèle IA</Label>
                     <Select value={aiModel} onValueChange={setAiModel}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select AI model" />
+                        <SelectValue placeholder="Sélectionner le modèle IA" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="gpt-4">GPT-4</SelectItem>
@@ -106,30 +107,30 @@ const Admin = () => {
                   </div>
                   
                   <div className="space-y-3">
-                    <Label htmlFor="api-key">API Key</Label>
+                    <Label htmlFor="api-key">Clé API</Label>
                     <Input
                       id="api-key"
                       type="password"
                       value={apiKey}
                       onChange={(e) => setApiKey(e.target.value)}
-                      placeholder="Enter your API key"
+                      placeholder="Entrez votre clé API"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-3">
-                  <Label htmlFor="system-prompt">System Prompt</Label>
+                  <Label htmlFor="system-prompt">Prompt système</Label>
                   <Textarea
                     id="system-prompt"
-                    placeholder="Enter system prompt for the AI model..."
+                    placeholder="Entrez le prompt système pour le modèle IA..."
                     className="min-h-32"
-                    defaultValue="You are an expert geospatial AI assistant that helps users create beautiful, accurate maps from natural language descriptions. Focus on interpreting geographic requirements, data analysis needs, and visual styling preferences."
+                    defaultValue="Vous êtes un assistant IA géospatial expert qui aide les utilisateurs à créer de belles cartes précises de la région Bourgogne-Franche-Comté à partir de descriptions en langage naturel. Concentrez-vous sur l'interprétation des exigences géographiques, l'analyse de données et les préférences de style visuel pour cette région spécifique."
                   />
                 </div>
 
                 <Button onClick={handleSaveSettings} variant="hero" className="gap-2">
                   <Save className="h-4 w-4" />
-                  Save Configuration
+                  Sauvegarder la configuration
                 </Button>
               </CardContent>
             </Card>
@@ -141,10 +142,10 @@ const Admin = () => {
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2">
                     <Palette className="h-5 w-5" />
-                    Map Templates
+                    Modèles de cartes
                   </CardTitle>
                   <Button onClick={handleAddTemplate} variant="outline">
-                    Add Template
+                    Ajouter un modèle
                   </Button>
                 </div>
               </CardHeader>
@@ -156,7 +157,7 @@ const Admin = () => {
                         <div className="flex items-center justify-between mb-3">
                           <h3 className="font-medium">{template.name}</h3>
                           <Badge variant={template.active ? "default" : "secondary"}>
-                            {template.active ? "Active" : "Inactive"}
+                            {template.active ? "Actif" : "Inactif"}
                           </Badge>
                         </div>
                         <div className="h-24 bg-gradient-ocean rounded-md mb-3"></div>
@@ -166,7 +167,7 @@ const Admin = () => {
                           onClick={() => toggleTemplate(template.id)}
                           className="w-full"
                         >
-                          {template.active ? "Deactivate" : "Activate"}
+                          {template.active ? "Désactiver" : "Activer"}
                         </Button>
                       </CardContent>
                     </Card>
@@ -181,36 +182,36 @@ const Admin = () => {
               <Card>
                 <CardContent className="p-6">
                   <div className="text-2xl font-bold text-primary">{mockStats.totalMaps}</div>
-                  <p className="text-muted-foreground text-sm">Total Maps Generated</p>
+                  <p className="text-muted-foreground text-sm">Cartes générées au total</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-6">
                   <div className="text-2xl font-bold text-primary">{mockStats.thisMonth}</div>
-                  <p className="text-muted-foreground text-sm">Maps This Month</p>
+                  <p className="text-muted-foreground text-sm">Cartes ce mois-ci</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-6">
                   <div className="text-2xl font-bold text-primary">{mockStats.activeUsers}</div>
-                  <p className="text-muted-foreground text-sm">Active Users</p>
+                  <p className="text-muted-foreground text-sm">Utilisateurs actifs</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-6">
                   <div className="text-2xl font-bold text-primary">{mockStats.avgResponseTime}</div>
-                  <p className="text-muted-foreground text-sm">Avg Response Time</p>
+                  <p className="text-muted-foreground text-sm">Temps de réponse moyen</p>
                 </CardContent>
               </Card>
             </div>
 
             <Card>
               <CardHeader>
-                <CardTitle>Usage Analytics</CardTitle>
+                <CardTitle>Analytiques d'utilisation</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="h-64 bg-muted rounded-lg flex items-center justify-center">
-                  <p className="text-muted-foreground">Analytics charts would be displayed here</p>
+                  <p className="text-muted-foreground">Les graphiques d'analyse seraient affichés ici</p>
                 </div>
               </CardContent>
             </Card>
@@ -221,13 +222,13 @@ const Admin = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Settings className="h-5 w-5" />
-                  System Settings
+                  Paramètres système
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-3">
-                    <Label htmlFor="max-file-size">Max File Size (MB)</Label>
+                    <Label htmlFor="max-file-size">Taille max des fichiers (MB)</Label>
                     <Input
                       id="max-file-size"
                       type="number"
@@ -238,7 +239,7 @@ const Admin = () => {
                   </div>
                   
                   <div className="space-y-3">
-                    <Label htmlFor="timeout">Request Timeout (seconds)</Label>
+                    <Label htmlFor="timeout">Timeout des requêtes (secondes)</Label>
                     <Input
                       id="timeout"
                       type="number"
@@ -251,7 +252,7 @@ const Admin = () => {
 
                 <Button onClick={handleSaveSettings} variant="hero" className="gap-2">
                   <Save className="h-4 w-4" />
-                  Save Settings
+                  Sauvegarder les paramètres
                 </Button>
               </CardContent>
             </Card>

@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Search, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,17 +16,17 @@ const SearchBar = ({ onSearch, isLoading = false }: SearchBarProps) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!prompt.trim()) {
-      toast.error("Please enter a prompt to generate your map");
+      toast.error("Veuillez entrer un prompt pour générer votre carte");
       return;
     }
     onSearch(prompt.trim());
   };
 
   const examplePrompts = [
-    "Show all municipalities in California with population data",
-    "Create a choropleth map of European countries by GDP",
-    "Map coffee shops in downtown Seattle with ratings",
-    "Display earthquake epicenters in Japan for the last year"
+    "Montrer toutes les communes de Côte-d'Or avec données démographiques",
+    "Créer une carte choroplèthe des départements de Bourgogne-Franche-Comté par PIB",
+    "Cartographier les offices de tourisme dans le Jura avec évaluations",
+    "Afficher les zones viticoles en Bourgogne avec appellations"
   ];
 
   return (
@@ -36,7 +37,7 @@ const SearchBar = ({ onSearch, isLoading = false }: SearchBarProps) => {
           <Input
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            placeholder="Describe the map you want to create... (e.g., 'Show all municipalities in Bourgogne with population and color code by density')"
+            placeholder="Décrivez la carte que vous souhaitez créer... (ex: 'Montrer toutes les communes du Doubs avec population et code couleur par densité')"
             className="pl-12 pr-32 h-14 text-base border-2 border-primary/20 focus:border-primary transition-colors"
             disabled={isLoading}
           />
@@ -52,13 +53,13 @@ const SearchBar = ({ onSearch, isLoading = false }: SearchBarProps) => {
             ) : (
               <Sparkles className="h-4 w-4" />
             )}
-            Generate Map
+            Générer la carte
           </Button>
         </div>
       </form>
 
       <div className="space-y-2">
-        <p className="text-sm text-muted-foreground font-medium">Try these examples:</p>
+        <p className="text-sm text-muted-foreground font-medium">Essayez ces exemples :</p>
         <div className="flex flex-wrap gap-2">
           {examplePrompts.map((example, index) => (
             <button

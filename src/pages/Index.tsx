@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -28,23 +29,23 @@ const Index = () => {
   const features = [
     {
       icon: Sparkles,
-      title: "AI-Powered Generation",
-      description: "Transform natural language into stunning geographic visualizations"
+      title: "Génération IA",
+      description: "Transformez le langage naturel en magnifiques visualisations géographiques"
     },
     {
       icon: Map,
-      title: "Multiple Map Types",
-      description: "Points, choropleth, lines, and polygon maps with automated styling"
+      title: "Types de cartes multiples",
+      description: "Cartes de points, choroplèthes, lignes et polygones avec style automatisé"
     },
     {
       icon: FileText,
-      title: "Data Import",
-      description: "Support for Excel, CSV, GeoJSON, GPKG, and KML formats"
+      title: "Import de données",
+      description: "Support pour Excel, CSV, GeoJSON, GPKG et formats KML"
     },
     {
       icon: Share2,
-      title: "Easy Export",
-      description: "Export as PDF, image, or shareable interactive web links"
+      title: "Export facile",
+      description: "Exportez en PDF, image ou liens web interactifs partageables"
     }
   ];
 
@@ -54,11 +55,11 @@ const Index = () => {
         {/* Hero Section */}
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-hero bg-clip-text text-transparent">
-            AI Geographic Map Generator
+            Générateur de Cartes IA pour Bourgogne-Franche-Comté
           </h1>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto mb-8">
-            Create beautiful, interactive maps from natural language prompts. 
-            Perfect for data journalists, urban planners, researchers, and public administrations.
+            Créez de magnifiques cartes interactives de la région Bourgogne-Franche-Comté à partir de prompts en langage naturel. 
+            Parfait pour les journalistes de données, urbanistes, chercheurs et administrations publiques.
           </p>
         </div>
 
@@ -70,7 +71,7 @@ const Index = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Sparkles className="h-5 w-5 text-primary" />
-                  Describe Your Map
+                  Décrivez votre carte
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -82,7 +83,7 @@ const Index = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <FileText className="h-5 w-5 text-primary" />
-                  Upload Geodata
+                  Télécharger des géodonnées
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -101,9 +102,9 @@ const Index = () => {
 
         {/* Features Section */}
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold mb-4">Powerful Features</h2>
+          <h2 className="text-3xl font-bold mb-4">Fonctionnalités puissantes</h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Everything you need to create professional geographic visualizations with AI
+            Tout ce dont vous avez besoin pour créer des visualisations géographiques professionnelles avec l'IA
           </p>
         </div>
 
