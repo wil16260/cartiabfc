@@ -8,10 +8,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Settings, Cpu, Palette, Activity, Save } from "lucide-react";
+import { Settings, Cpu, Palette, Activity, Save, LogOut } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
+import LoginForm from "@/components/auth/LoginForm";
 
 const Admin = () => {
+  const { user, isAdmin, loading, signOut } = useAuth();
   const [aiModel, setAiModel] = useState("gpt-4");
   const [apiKey, setApiKey] = useState("");
   const [templates, setTemplates] = useState([
@@ -19,6 +22,21 @@ const Admin = () => {
     { id: 2, name: "Thème océan", active: false },
     { id: 3, name: "Style terrain", active: false }
   ]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-subtle">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Vérification des permissions...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user || !isAdmin) {
+    return <LoginForm onLoginSuccess={() => window.location.reload()} />;
+  }
 
   const handleSaveSettings = () => {
     toast.success("Paramètres sauvegardés avec succès !");
@@ -52,13 +70,19 @@ const Admin = () => {
   return (
     <div className="min-h-screen bg-gradient-subtle">
       <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2 bg-gradient-hero bg-clip-text text-transparent">
-            Tableau de bord administrateur
-          </h1>
-          <p className="text-muted-foreground">
-            Gérez les modèles IA, les modèles de cartes et surveillez l'utilisation du système
-          </p>
+        <div className="mb-8 flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold mb-2 bg-gradient-hero bg-clip-text text-transparent">
+              Tableau de bord administrateur
+            </h1>
+            <p className="text-muted-foreground">
+              Gérez les modèles IA, les modèles de cartes et surveillez l'utilisation du système
+            </p>
+          </div>
+          <Button onClick={signOut} variant="outline" className="gap-2">
+            <LogOut className="h-4 w-4" />
+            Se déconnecter
+          </Button>
         </div>
 
         <Tabs defaultValue="ai-config" className="space-y-6">
