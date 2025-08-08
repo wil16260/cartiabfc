@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,20 +9,54 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Settings, Cpu, Palette, Activity, Save, LogOut, BarChart3, MapPin } from "lucide-react";
+import { Settings, Cpu, Palette, Activity, Save, LogOut, BarChart3, MapPin, Eye, EyeOff } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/lib/supabase";
 import GeoJSONTemplateManager from "@/components/admin/GeoJSONTemplateManager";
 
 const Admin = () => {
   const { user, isAdmin, loading, signOut } = useAuth();
-  const [aiModel, setAiModel] = useState("gpt-4");
-  const [apiKey, setApiKey] = useState("");
+  const [aiConfigs, setAiConfigs] = useState<any[]>([]);
+  const [selectedConfig, setSelectedConfig] = useState<any>(null);
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [systemPrompt, setSystemPrompt] = useState("");
   const [templates, setTemplates] = useState([
     { id: 1, name: "Bleu par défaut", active: true },
     { id: 2, name: "Thème océan", active: false },
     { id: 3, name: "Style terrain", active: false }
   ]);
+
+  useEffect(() => {
+    if (isAdmin) {
+      fetchAiConfigs();
+    }
+  }, [isAdmin]);
+
+  const fetchAiConfigs = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('ai_config')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      setAiConfigs(data || []);
+      const activeConfig = data?.find(config => config.is_active);
+      if (activeConfig) {
+        setSelectedConfig(activeConfig);
+        setSystemPrompt(activeConfig.system_prompt || "");
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des configurations IA:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les configurations IA",
+        variant: "destructive"
+      });
+    }
+  };
 
   if (loading) {
     return (
@@ -62,11 +96,33 @@ const Admin = () => {
     );
   }
 
-  const handleSaveSettings = () => {
-    toast({
-      title: "Succès",
-      description: "Paramètres sauvegardés avec succès !"
-    });
+  const handleSaveSettings = async () => {
+    try {
+      if (selectedConfig) {
+        const { error } = await supabase
+          .from('ai_config')
+          .update({
+            system_prompt: systemPrompt,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', selectedConfig.id);
+
+        if (error) throw error;
+
+        toast({
+          title: "Succès",
+          description: "Configuration IA sauvegardée avec succès !"
+        });
+        fetchAiConfigs();
+      }
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de sauvegarder la configuration",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleAddTemplate = () => {
@@ -148,33 +204,17 @@ const Admin = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-3">
-                    <Label htmlFor="ai-model">Modèle IA</Label>
-                    <Select value={aiModel} onValueChange={setAiModel}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sélectionner le modèle IA" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="gpt-4">GPT-4</SelectItem>
-                        <SelectItem value="gpt-3.5-turbo">GPT-3.5 Turbo</SelectItem>
-                        <SelectItem value="claude-3">Claude 3</SelectItem>
-                        <SelectItem value="mistral-large">Mistral Large</SelectItem>
-                      </SelectContent>
-                    </Select>
+                {selectedConfig && (
+                  <div className="p-4 bg-muted rounded-lg mb-6">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-medium">Configuration active:</span>
+                      <Badge variant="default">{selectedConfig.model_name}</Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Clé API: {selectedConfig.api_key_name}
+                    </p>
                   </div>
-                  
-                  <div className="space-y-3">
-                    <Label htmlFor="api-key">Clé API</Label>
-                    <Input
-                      id="api-key"
-                      type="password"
-                      value={apiKey}
-                      onChange={(e) => setApiKey(e.target.value)}
-                      placeholder="Entrez votre clé API"
-                    />
-                  </div>
-                </div>
+                )}
 
                 <div className="space-y-3">
                   <Label htmlFor="system-prompt">Prompt système</Label>
@@ -182,7 +222,8 @@ const Admin = () => {
                     id="system-prompt"
                     placeholder="Entrez le prompt système pour le modèle IA..."
                     className="min-h-32"
-                    defaultValue="Vous êtes un assistant IA géospatial expert qui aide les utilisateurs à créer de belles cartes précises de la région Bourgogne-Franche-Comté à partir de descriptions en langage naturel. Concentrez-vous sur l'interprétation des exigences géographiques, l'analyse de données et les préférences de style visuel pour cette région spécifique."
+                    value={systemPrompt}
+                    onChange={(e) => setSystemPrompt(e.target.value)}
                   />
                 </div>
 

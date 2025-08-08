@@ -42,10 +42,36 @@ const Index = () => {
     setCurrentPrompt(prompt);
     setIsGenerating(true);
     
-    // Simulate AI processing time
-    setTimeout(() => {
+    try {
+      const response = await fetch('/api/generate-map-with-mistral', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ prompt }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate map');
+      }
+
+      const data = await response.json();
+      
+      if (data.success && data.mapData.layers) {
+        // Activate suggested layers
+        const suggestedLayers = data.mapData.layers;
+        setMapLayers(prev => 
+          prev.map(layer => ({
+            ...layer,
+            enabled: layer.id === 'base_departments' || suggestedLayers.includes(layer.id)
+          }))
+        );
+      }
+    } catch (error) {
+      console.error('Error generating map:', error);
+    } finally {
       setIsGenerating(false);
-    }, 3000);
+    }
   };
 
   const handleFilesUploaded = (files: File[]) => {

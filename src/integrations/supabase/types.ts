@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_config: {
+        Row: {
+          api_key_name: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          model_name: string
+          system_prompt: string | null
+          updated_at: string
+        }
+        Insert: {
+          api_key_name: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          model_name: string
+          system_prompt?: string | null
+          updated_at?: string
+        }
+        Update: {
+          api_key_name?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          model_name?: string
+          system_prompt?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       geojson_templates: {
         Row: {
           created_at: string
