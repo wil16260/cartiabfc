@@ -1,5 +1,6 @@
 
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,10 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Settings, Cpu, Palette, Activity, Save, LogOut } from "lucide-react";
-import { toast } from "sonner";
+import { Settings, Cpu, Palette, Activity, Save, LogOut, BarChart3, MapPin } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import LoginForm from "@/components/auth/LoginForm";
+import GeoJSONTemplateManager from "@/components/admin/GeoJSONTemplateManager";
 
 const Admin = () => {
   const { user, isAdmin, loading, signOut } = useAuth();
@@ -35,11 +36,37 @@ const Admin = () => {
   }
 
   if (!user || !isAdmin) {
-    return <LoginForm onLoginSuccess={() => window.location.reload()} />;
+    return (
+      <div className="min-h-screen bg-gradient-subtle flex items-center justify-center p-4">
+        <Card className="w-full max-w-md shadow-card">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl text-destructive">Accès restreint</CardTitle>
+          </CardHeader>
+          <CardContent className="text-center space-y-4">
+            <p className="text-muted-foreground">
+              Cette page est réservée aux administrateurs. 
+              {!user && " Vous devez vous connecter avec un compte administrateur."}
+              {user && !isAdmin && " Votre compte n'a pas les privilèges administrateur."}
+            </p>
+            <div className="flex gap-2 justify-center">
+              <Link to="/auth">
+                <Button>Se connecter</Button>
+              </Link>
+              <Link to="/">
+                <Button variant="outline">Retour à l'accueil</Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   const handleSaveSettings = () => {
-    toast.success("Paramètres sauvegardés avec succès !");
+    toast({
+      title: "Succès",
+      description: "Paramètres sauvegardés avec succès !"
+    });
   };
 
   const handleAddTemplate = () => {
@@ -49,7 +76,10 @@ const Admin = () => {
       active: false
     };
     setTemplates([...templates, newTemplate]);
-    toast.success("Nouveau modèle ajouté !");
+    toast({
+      title: "Succès",
+      description: "Nouveau modèle ajouté !"
+    });
   };
 
   const toggleTemplate = (id: number) => {
@@ -86,7 +116,7 @@ const Admin = () => {
         </div>
 
         <Tabs defaultValue="ai-config" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="ai-config" className="gap-2">
               <Cpu className="h-4 w-4" />
               Configuration IA
@@ -94,6 +124,10 @@ const Admin = () => {
             <TabsTrigger value="templates" className="gap-2">
               <Palette className="h-4 w-4" />
               Modèles
+            </TabsTrigger>
+            <TabsTrigger value="geojson" className="gap-2">
+              <MapPin className="h-4 w-4" />
+              GeoJSON
             </TabsTrigger>
             <TabsTrigger value="analytics" className="gap-2">
               <Activity className="h-4 w-4" />
@@ -201,41 +235,35 @@ const Admin = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="analytics">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-              <Card>
-                <CardContent className="p-6">
-                  <div className="text-2xl font-bold text-primary">{mockStats.totalMaps}</div>
-                  <p className="text-muted-foreground text-sm">Cartes générées au total</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-6">
-                  <div className="text-2xl font-bold text-primary">{mockStats.thisMonth}</div>
-                  <p className="text-muted-foreground text-sm">Cartes ce mois-ci</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-6">
-                  <div className="text-2xl font-bold text-primary">{mockStats.activeUsers}</div>
-                  <p className="text-muted-foreground text-sm">Utilisateurs actifs</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-6">
-                  <div className="text-2xl font-bold text-primary">{mockStats.avgResponseTime}</div>
-                  <p className="text-muted-foreground text-sm">Temps de réponse moyen</p>
-                </CardContent>
-              </Card>
-            </div>
+          <TabsContent value="geojson" className="space-y-6">
+            <GeoJSONTemplateManager />
+          </TabsContent>
 
+          <TabsContent value="analytics">
             <Card>
               <CardHeader>
-                <CardTitle>Analytiques d'utilisation</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5" />
+                  Statistiques d'utilisation
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="h-64 bg-muted rounded-lg flex items-center justify-center">
-                  <p className="text-muted-foreground">Les graphiques d'analyse seraient affichés ici</p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="text-center p-4 bg-muted rounded-lg">
+                    <div className="text-2xl font-bold text-primary">1,234</div>
+                    <div className="text-sm text-muted-foreground">Cartes générées</div>
+                  </div>
+                  <div className="text-center p-4 bg-muted rounded-lg">
+                    <div className="text-2xl font-bold text-primary">567</div>
+                    <div className="text-sm text-muted-foreground">Utilisateurs actifs</div>
+                  </div>
+                  <div className="text-center p-4 bg-muted rounded-lg">
+                    <div className="text-2xl font-bold text-primary">89%</div>
+                    <div className="text-sm text-muted-foreground">Taux de satisfaction</div>
+                  </div>
+                </div>
+                <div className="mt-6 h-64 bg-muted rounded-lg flex items-center justify-center">
+                  <p className="text-muted-foreground">Graphiques d'analytiques à implémenter</p>
                 </div>
               </CardContent>
             </Card>

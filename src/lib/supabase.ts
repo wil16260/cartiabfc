@@ -1,15 +1,18 @@
-import { createClient } from '@supabase/supabase-js'
+import { supabase } from '@/integrations/supabase/client'
 
-// Placeholder for Supabase connection - will be replaced by native integration
-const supabaseUrl = 'https://placeholder.supabase.co'
-const supabaseAnonKey = 'placeholder-key'
+// Re-export the Supabase client from the integration
+export { supabase }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
-
-// Email administrateur autorisé - modifiez cette valeur avec votre email
-export const ADMIN_EMAIL = "votre_email@exemple.com"
-
+// Check if user is admin based on profile
 export const checkAdminAuth = async () => {
   const { data: { user } } = await supabase.auth.getUser()
-  return user?.email === ADMIN_EMAIL
+  if (!user) return false
+  
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('is_admin')
+    .eq('user_id', user.id)
+    .single()
+  
+  return profile?.is_admin || false
 }

@@ -1,8 +1,10 @@
 
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Sparkles, Map, FileText, Share2 } from "lucide-react";
+import { Sparkles, Map, FileText, Share2, LogIn } from "lucide-react";
 import SearchBar from "@/components/SearchBar";
 import FileUpload from "@/components/FileUpload";
 import MapDisplay from "@/components/MapDisplay";
@@ -100,6 +102,14 @@ const Index = () => {
             Créez de magnifiques cartes interactives de la région Bourgogne-Franche-Comté à partir de prompts en langage naturel. 
             Parfait pour les journalistes de données, urbanistes, chercheurs et administrations publiques.
           </p>
+          <div className="flex justify-center">
+            <Link to="/auth">
+              <Button className="flex items-center gap-2">
+                <LogIn className="h-4 w-4" />
+                Se connecter
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {/* Main Interface */}
