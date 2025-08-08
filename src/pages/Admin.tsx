@@ -9,11 +9,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Settings, Cpu, Palette, Activity, Save, LogOut, BarChart3, MapPin, Eye, EyeOff } from "lucide-react";
+import { Settings, Cpu, Palette, Activity, Save, LogOut, BarChart3, MapPin, Eye, EyeOff, FileText } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 import GeoJSONTemplateManager from "@/components/admin/GeoJSONTemplateManager";
+import DocumentManager from "@/components/admin/DocumentManager";
 
 const Admin = () => {
   const { user, isAdmin, loading, signOut } = useAuth();
@@ -172,10 +173,14 @@ const Admin = () => {
         </div>
 
         <Tabs defaultValue="ai-config" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="ai-config" className="gap-2">
               <Cpu className="h-4 w-4" />
               Configuration IA
+            </TabsTrigger>
+            <TabsTrigger value="documents" className="gap-2">
+              <FileText className="h-4 w-4" />
+              Documents RAG
             </TabsTrigger>
             <TabsTrigger value="templates" className="gap-2">
               <Palette className="h-4 w-4" />
@@ -233,6 +238,10 @@ const Admin = () => {
                 </Button>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="documents" className="space-y-6">
+            <DocumentManager />
           </TabsContent>
 
           <TabsContent value="templates">

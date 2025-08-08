@@ -47,6 +47,54 @@ export type Database = {
         }
         Relationships: []
       }
+      documents: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          embedding_processed: boolean | null
+          file_size: number | null
+          file_type: string
+          file_url: string
+          id: string
+          is_active: boolean | null
+          metadata: Json | null
+          name: string
+          prompt: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          embedding_processed?: boolean | null
+          file_size?: number | null
+          file_type: string
+          file_url: string
+          id?: string
+          is_active?: boolean | null
+          metadata?: Json | null
+          name: string
+          prompt?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          embedding_processed?: boolean | null
+          file_size?: number | null
+          file_type?: string
+          file_url?: string
+          id?: string
+          is_active?: boolean | null
+          metadata?: Json | null
+          name?: string
+          prompt?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       geojson_templates: {
         Row: {
           created_at: string
