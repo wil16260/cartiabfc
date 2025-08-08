@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Download, Share2, Edit3, Maximize2 } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/lib/supabase";
 
 interface MapDisplayProps {
   prompt?: string;
@@ -45,9 +46,9 @@ const MapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: MapDispla
       unit: 'metric'
     }), 'bottom-left');
 
-    // Load French departments GeoJSON
+    // Load GeoJSON templates from Supabase
     map.current.on('load', () => {
-      loadDepartmentsLayer();
+      loadGeoJSONTemplates();
     });
 
     return () => {
@@ -55,69 +56,122 @@ const MapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: MapDispla
     };
   }, []);
 
-  const loadDepartmentsLayer = async () => {
+  const loadGeoJSONTemplates = async () => {
     if (!map.current) return;
 
     try {
-      // Load French departments GeoJSON
-      const response = await fetch('/data/departements-france.geojson');
-      const departmentsData = await response.json();
+      // Fetch active GeoJSON templates from Supabase
+      const { data: templates, error } = await supabase
+        .from('geojson_templates')
+        .select('*')
+        .eq('is_active', true)
+        .order('properties->level', { ascending: true });
 
-      // Add source
-      map.current.addSource('departments', {
-        type: 'geojson',
-        data: departmentsData
-      });
+      if (error) {
+        console.error('Error loading templates:', error);
+        return;
+      }
 
-      // Add fill layer
-      map.current.addLayer({
-        id: 'departments-fill',
-        type: 'fill',
-        source: 'departments',
-        paint: {
-          'fill-color': 'hsl(var(--primary))',
-          'fill-opacity': 0.1
-        }
-      });
+      if (!templates || templates.length === 0) {
+        console.log('No active GeoJSON templates found');
+        return;
+      }
 
-      // Add stroke layer
-      map.current.addLayer({
-        id: 'departments-stroke',
-        type: 'line',
-        source: 'departments',
-        paint: {
-          'line-color': 'hsl(var(--primary))',
-          'line-width': 1,
-          'line-opacity': 0.6
-        }
-      });
-
-      // Add hover effects
-      map.current.on('mouseenter', 'departments-fill', (e) => {
-        if (e.features && e.features[0]) {
-          map.current!.getCanvas().style.cursor = 'pointer';
-          
-          // Show popup with department info
-          const feature = e.features[0];
-          const popup = new mapboxgl.Popup({ offset: [0, -15] })
-            .setLngLat(e.lngLat)
-            .setHTML(`
-              <div class="p-2">
-                <h3 class="font-bold">${feature.properties?.nom || 'Département'}</h3>
-                <p class="text-sm text-muted-foreground">Code: ${feature.properties?.code || 'N/A'}</p>
-              </div>
-            `)
-            .addTo(map.current!);
-        }
-      });
-
-      map.current.on('mouseleave', 'departments-fill', () => {
-        map.current!.getCanvas().style.cursor = '';
-      });
+      // Load each template
+      for (const template of templates) {
+        await loadTemplateLayer(template);
+      }
 
     } catch (error) {
-      console.error('Erreur lors du chargement des départements:', error);
-      toast.error("Erreur lors du chargement de la carte de base");
+      console.error('Erreur lors du chargement des modèles GeoJSON:', error);
+      toast.error("Erreur lors du chargement des couches de la carte");
+    }
+  };
+
+  const loadTemplateLayer = async (template: any) => {
+    if (!map.current) return;
+
+    try {
+      // Check conditional visibility for communes
+      if (template.properties?.conditional_visibility && template.properties?.requires_data === 'commune') {
+        // For now, skip commune layer - could be enabled based on data availability
+        console.log(`Skipping ${template.name} - conditional visibility not met`);
+        return;
+      }
+
+      // Fetch GeoJSON data
+      const response = await fetch(template.geojson_url);
+      if (!response.ok) {
+        throw new Error(`Failed to load ${template.geojson_url}`);
+      }
+
+      const geoData = await response.json();
+      const sourceId = `template-${template.id}`;
+      const fillLayerId = `${sourceId}-fill`;
+      const lineLayerId = `${sourceId}-line`;
+
+      // Add source
+      map.current.addSource(sourceId, {
+        type: 'geojson',
+        data: geoData
+      });
+
+      // Parse style configuration
+      const style = template.style_config || {};
+      
+      // Add fill layer if fillColor is defined and not transparent
+      if (style.fillColor && style.fillColor !== 'transparent') {
+        map.current.addLayer({
+          id: fillLayerId,
+          type: 'fill',
+          source: sourceId,
+          paint: {
+            'fill-color': style.fillColor,
+            'fill-opacity': style.fillOpacity || 0.3
+          }
+        });
+
+        // Add hover effects for fill layer
+        map.current.on('mouseenter', fillLayerId, (e) => {
+          if (e.features && e.features[0]) {
+            map.current!.getCanvas().style.cursor = 'pointer';
+            
+            const feature = e.features[0];
+            const popup = new mapboxgl.Popup({ offset: [0, -15] })
+              .setLngLat(e.lngLat)
+              .setHTML(`
+                <div class="p-2">
+                  <h3 class="font-bold">${template.name}</h3>
+                  <p class="text-sm text-muted-foreground">
+                    ${feature.properties?.nom || feature.properties?.name || 'Zone géographique'}
+                  </p>
+                </div>
+              `)
+              .addTo(map.current!);
+          }
+        });
+
+        map.current.on('mouseleave', fillLayerId, () => {
+          map.current!.getCanvas().style.cursor = '';
+        });
+      }
+
+      // Add line layer
+      map.current.addLayer({
+        id: lineLayerId,
+        type: 'line',
+        source: sourceId,
+        paint: {
+          'line-color': style.color || style.fillColor || '#000000',
+          'line-width': style.weight || 1,
+          'line-opacity': style.opacity || 1
+        }
+      });
+
+      console.log(`Loaded template: ${template.name}`);
+
+    } catch (error) {
+      console.error(`Error loading template ${template.name}:`, error);
     }
   };
 
