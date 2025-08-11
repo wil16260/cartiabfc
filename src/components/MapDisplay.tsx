@@ -131,15 +131,18 @@ const MapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: MapDispla
         }
       });
 
-      // Add yellow outline for departments (always visible)
+      // Add outline for departments - visible based on layer toggle
       map.current.addLayer({
         id: deptLayerId,
         type: 'line',
         source: deptSourceId,
         paint: {
-          'line-color': '#fbbf24', // Yellow color
-          'line-width': 2,
+          'line-color': '#64748b', // Gray color for borders
+          'line-width': 1.5,
           'line-opacity': 0.8
+        },
+        layout: {
+          visibility: visibleLayers.includes('base_departments') ? 'visible' : 'none'
         }
       });
 
@@ -255,7 +258,8 @@ const MapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: MapDispla
 
     // Update layer visibility based on visibleLayers prop
     const layerMappings = {
-      'base_departments': ['departments-fill', 'departments-stroke'],
+      'base_departments': ['department-boundaries-outline'],
+      'base_ign': ['ign-layer'],
       'data_population': ['population-layer'],
       'data_unemployment': ['unemployment-layer'],
       'data_density': ['density-layer']
@@ -273,6 +277,40 @@ const MapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: MapDispla
         }
       });
     });
+
+    // Handle IGN layer separately - add if needed
+    if (visibleLayers.includes('base_ign') && !map.current.getSource('ign')) {
+      addIgnLayer();
+    }
+  };
+
+  const addIgnLayer = () => {
+    if (!map.current) return;
+
+    try {
+      // Add IGN raster source
+      map.current.addSource('ign', {
+        type: 'raster',
+        tiles: [
+          'https://wxs.ign.fr/cartes/geoportail/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}'
+        ],
+        tileSize: 256
+      });
+
+      // Add IGN layer below departments
+      map.current.addLayer({
+        id: 'ign-layer',
+        type: 'raster',
+        source: 'ign',
+        layout: {
+          visibility: 'visible'
+        }
+      }, 'department-boundaries-outline');
+
+      console.log('IGN layer added');
+    } catch (error) {
+      console.error('Error adding IGN layer:', error);
+    }
   };
 
   const simulateMapGeneration = async (prompt: string) => {

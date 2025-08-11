@@ -1,7 +1,8 @@
 
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Sparkles, FileText } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Sparkles, Upload } from "lucide-react";
 import SearchBar from "@/components/SearchBar";
 import FileUpload from "@/components/FileUpload";
 import MapDisplay from "@/components/MapDisplay";
@@ -11,12 +12,19 @@ const Index = () => {
   const [currentPrompt, setCurrentPrompt] = useState("");
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [showFileUpload, setShowFileUpload] = useState(false);
   const [mapLayers, setMapLayers] = useState([
     { 
       id: 'base_departments', 
-      name: 'Départements français', 
+      name: 'Limites départementales', 
       enabled: true, 
-      description: 'Couche de base obligatoire avec les limites départementales' 
+      description: 'Contours des départements' 
+    },
+    { 
+      id: 'base_ign', 
+      name: 'Plan IGN', 
+      enabled: false, 
+      description: 'Carte topographique IGN' 
     },
     { 
       id: 'data_population', 
@@ -102,27 +110,31 @@ const Index = () => {
               Décrivez votre carte
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <SearchBar onSearch={handleSearch} isLoading={isGenerating} />
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setShowFileUpload(!showFileUpload)}
+                className="flex items-center gap-2"
+              >
+                <Upload className="h-4 w-4" />
+                Ajouter des données
+              </Button>
+            </div>
+            {showFileUpload && (
+              <div className="mt-4 p-4 border rounded-lg bg-muted/50">
+                <FileUpload onFilesUploaded={handleFilesUploaded} />
+              </div>
+            )}
           </CardContent>
         </Card>
 
         {/* Main Interface */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Left Column - Configuration */}
-          <div className="lg:col-span-1 space-y-6">
-            <Card className="shadow-card">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5 text-primary" />
-                  Télécharger des géodonnées
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <FileUpload onFilesUploaded={handleFilesUploaded} />
-              </CardContent>
-            </Card>
-
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+          {/* Left Column - Layers */}
+          <div className="lg:col-span-1">
             <FilterPanel 
               layers={mapLayers} 
               onLayerToggle={handleLayerToggle} 
@@ -130,7 +142,7 @@ const Index = () => {
           </div>
 
           {/* Right Column - Map */}
-          <div className="lg:col-span-3">
+          <div className="lg:col-span-4">
             <MapDisplay 
               prompt={currentPrompt} 
               isLoading={isGenerating}
