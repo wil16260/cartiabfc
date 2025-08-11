@@ -109,60 +109,7 @@ const FileUpload = ({ onFilesUploaded }: FileUploadProps) => {
     }
   };
 
-  return (
-    <div className="flex items-center gap-2">
-      <div 
-        className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 border-dashed cursor-pointer transition-all duration-200 ${
-          dragActive 
-            ? 'border-primary bg-primary/5' 
-            : 'border-muted-foreground/30 hover:border-primary/50 hover:bg-primary/5'
-        }`}
-        onDrop={handleDrop}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onClick={() => fileInputRef.current?.click()}
-      >
-        <Upload className="h-4 w-4 text-primary" />
-        <span className="text-sm">Fichiers ({uploadedFiles.length})</span>
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          accept=".xlsx,.xls,.csv,.geojson,.gpkg,.kml"
-          onChange={handleFileInput}
-          className="hidden"
-        />
-      </div>
-
-      {uploadedFiles.length > 0 && (
-        <div className="flex items-center gap-1">
-          {uploadedFiles.slice(0, 3).map((file, index) => {
-            const FileIcon = getFileIcon(file.name);
-            return (
-              <div key={index} className="flex items-center gap-1 px-2 py-1 bg-muted rounded text-xs">
-                <FileIcon className="h-3 w-3 text-primary" />
-                <span className="max-w-20 truncate">{file.name}</span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-4 w-4 p-0"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    removeFile(index);
-                  }}
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              </div>
-            );
-          })}
-          {uploadedFiles.length > 3 && (
-            <span className="text-xs text-muted-foreground">+{uploadedFiles.length - 3}</span>
-          )}
-        </div>
-      )}
-    </div>
-  );
+  return null;
 };
 
 export default FileUpload;
