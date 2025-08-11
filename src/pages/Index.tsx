@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Sparkles, Upload } from "lucide-react";
 import SearchBar from "@/components/SearchBar";
 import FileUpload from "@/components/FileUpload";
-import D3MapDisplay from "@/components/D3MapDisplay";
+import UMapDisplay from "@/components/UMapDisplay";
 import FilterPanel from "@/components/FilterPanel";
 
 const Index = () => {
@@ -146,7 +146,7 @@ const Index = () => {
 
           {/* Right Column - Map */}
           <div className="lg:col-span-4">
-            <D3MapDisplay 
+            <UMapDisplay 
               prompt={currentPrompt} 
               isLoading={isGenerating}
               visibleLayers={visibleLayers}
