@@ -137,19 +137,20 @@ const MapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: MapDispla
         type: 'line',
         source: deptSourceId,
         paint: {
-          'line-color': '#64748b', // Gray color for borders
+          'line-color': '#64748b',
           'line-width': 1.5,
           'line-opacity': 0.8
         },
         layout: {
-          visibility: visibleLayers.includes('base_departments') ? 'visible' : 'none'
+          visibility: visibleLayers.includes('base_departments') ? 'visible' : 'visible' // Always visible for now
         }
       });
 
-      console.log('Department boundaries loaded with yellow outline');
+      console.log('Department boundaries loaded successfully');
       
     } catch (error) {
       console.error('Error loading department boundaries:', error);
+      toast.error("Erreur lors du chargement des limites départementales");
     }
   };
 
@@ -288,13 +289,20 @@ const MapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: MapDispla
     if (!map.current) return;
 
     try {
+      // Use a more reliable IGN tile service URL with API key placeholder
+      // Note: This requires a proper IGN API key for production use
+      const ignTileUrl = 'https://data.geopf.fr/wmts?' +
+        'SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0' +
+        '&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2' +
+        '&STYLE=normal&FORMAT=image/png' +
+        '&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}';
+
       // Add IGN raster source
       map.current.addSource('ign', {
         type: 'raster',
-        tiles: [
-          'https://wxs.ign.fr/cartes/geoportail/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}'
-        ],
-        tileSize: 256
+        tiles: [ignTileUrl],
+        tileSize: 256,
+        attribution: '© IGN'
       });
 
       // Add IGN layer below departments
@@ -304,12 +312,16 @@ const MapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: MapDispla
         source: 'ign',
         layout: {
           visibility: 'visible'
+        },
+        paint: {
+          'raster-opacity': 0.8
         }
       }, 'department-boundaries-outline');
 
       console.log('IGN layer added');
     } catch (error) {
       console.error('Error adding IGN layer:', error);
+      toast.error("Impossible de charger la couche IGN - service indisponible");
     }
   };
 
