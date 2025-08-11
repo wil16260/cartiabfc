@@ -110,82 +110,57 @@ const FileUpload = ({ onFilesUploaded }: FileUploadProps) => {
   };
 
   return (
-    <div className="space-y-4">
-      <Card 
-        className={`transition-all duration-200 cursor-pointer ${
+    <div className="flex items-center gap-2">
+      <div 
+        className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 border-dashed cursor-pointer transition-all duration-200 ${
           dragActive 
-            ? 'border-primary bg-primary/5 shadow-ocean' 
-            : 'border-dashed border-2 hover:border-primary/50 hover:bg-primary/5'
+            ? 'border-primary bg-primary/5' 
+            : 'border-muted-foreground/30 hover:border-primary/50 hover:bg-primary/5'
         }`}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onClick={() => fileInputRef.current?.click()}
       >
-        <CardContent className="p-8 text-center">
-          <Upload className="h-12 w-12 mx-auto mb-4 text-primary" />
-          <h3 className="text-lg font-semibold mb-2">Upload Geodata Files</h3>
-          <p className="text-muted-foreground mb-4">
-            Drag & drop files here, or click to browse
-          </p>
-          <p className="text-sm text-muted-foreground">
-            Supports: Excel, CSV, GeoJSON, GPKG, KML
-          </p>
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            accept=".xlsx,.xls,.csv,.geojson,.gpkg,.kml"
-            onChange={handleFileInput}
-            className="hidden"
-          />
-        </CardContent>
-      </Card>
+        <Upload className="h-4 w-4 text-primary" />
+        <span className="text-sm">Fichiers ({uploadedFiles.length})</span>
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          accept=".xlsx,.xls,.csv,.geojson,.gpkg,.kml"
+          onChange={handleFileInput}
+          className="hidden"
+        />
+      </div>
 
       {uploadedFiles.length > 0 && (
-        <div className="space-y-2">
-          <h4 className="font-medium text-sm">Uploaded Files ({uploadedFiles.length})</h4>
-          {uploadedFiles.map((file, index) => {
+        <div className="flex items-center gap-1">
+          {uploadedFiles.slice(0, 3).map((file, index) => {
             const FileIcon = getFileIcon(file.name);
             return (
-              <div key={index} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                <div className="flex items-center gap-3">
-                  <FileIcon className="h-5 w-5 text-primary" />
-                  <div>
-                    <p className="text-sm font-medium">{file.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {(file.size / 1024 / 1024).toFixed(2)} MB
-                    </p>
-                  </div>
-                </div>
+              <div key={index} className="flex items-center gap-1 px-2 py-1 bg-muted rounded text-xs">
+                <FileIcon className="h-3 w-3 text-primary" />
+                <span className="max-w-20 truncate">{file.name}</span>
                 <Button
                   variant="ghost"
                   size="sm"
+                  className="h-4 w-4 p-0"
                   onClick={(e) => {
                     e.stopPropagation();
                     removeFile(index);
                   }}
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-3 w-3" />
                 </Button>
               </div>
             );
           })}
+          {uploadedFiles.length > 3 && (
+            <span className="text-xs text-muted-foreground">+{uploadedFiles.length - 3}</span>
+          )}
         </div>
       )}
-
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3">
-        {supportedFormats.map((format, index) => {
-          const Icon = format.icon;
-          return (
-            <div key={index} className="text-center p-3 bg-muted/50 rounded-lg">
-              <Icon className="h-6 w-6 mx-auto mb-2 text-primary" />
-              <p className="text-xs font-medium">{format.ext}</p>
-              <p className="text-xs text-muted-foreground">{format.description}</p>
-            </div>
-          );
-        })}
-      </div>
     </div>
   );
 };
