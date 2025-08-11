@@ -112,7 +112,7 @@ const Index = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <SearchBar onSearch={handleSearch} isLoading={isGenerating} />
-            <div className="flex gap-2">
+            <div className="flex items-center gap-3">
               <Button 
                 variant="outline" 
                 size="sm"
@@ -120,8 +120,11 @@ const Index = () => {
                 className="flex items-center gap-2"
               >
                 <Upload className="h-4 w-4" />
-                Ajouter des données
+                Fichiers
               </Button>
+              <span className="text-sm text-muted-foreground">
+                Excel, CSV, GeoJSON, GPKG, KML acceptés
+              </span>
             </div>
             {showFileUpload && (
               <div className="mt-4 p-4 border rounded-lg bg-muted/50">
