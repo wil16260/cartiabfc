@@ -240,12 +240,46 @@ const MapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: MapDispla
     if (!map.current) return;
 
     try {
-      // Load commune GeoJSON data
-      const response = await fetch('/data/com_bfc3.json');
-      const communeData = await response.json();
+      const { dataLevel = 'communes' } = mapData;
+      let geoJsonUrl = '/data/com_bfc3.json';
+      let sourceId = 'styled-data';
+      let layerId = 'styled-layer';
+
+      // Choose appropriate data source based on level
+      switch (dataLevel) {
+        case 'departments':
+          geoJsonUrl = '/data/dpt_bfc.geojsonl.json';
+          sourceId = 'departments-data';
+          layerId = 'departments-styled';
+          break;
+        case 'epci':
+          // For EPCI, we'll aggregate commune data
+          await loadEPCIData(mapData);
+          return;
+        case 'communes':
+        default:
+          geoJsonUrl = '/data/com_bfc3.json';
+          sourceId = 'communes-data';
+          layerId = 'communes-styled';
+          break;
+      }
+
+      // Load appropriate GeoJSON data
+      const response = await fetch(geoJsonUrl);
+      let geoData;
       
-      const sourceId = 'communes-data';
-      const layerId = 'communes-styled';
+      if (dataLevel === 'departments') {
+        // Handle JSONL format for departments
+        const text = await response.text();
+        const lines = text.trim().split('\n');
+        const features = lines.map(line => JSON.parse(line));
+        geoData = {
+          type: 'FeatureCollection',
+          features: features
+        };
+      } else {
+        geoData = await response.json();
+      }
 
       // Remove existing layer and source if they exist
       if (map.current.getLayer(layerId)) {
@@ -258,14 +292,14 @@ const MapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: MapDispla
       // Add source
       map.current.addSource(sourceId, {
         type: 'geojson',
-        data: {
+        data: dataLevel === 'communes' ? {
           type: 'FeatureCollection',
-          features: communeData
-        }
+          features: geoData
+        } : geoData
       });
 
       // Generate color expression based on AI response
-      const colorExpression = generateColorExpression(mapData, communeData);
+      const colorExpression = generateColorExpression(mapData, geoData.features || geoData);
 
       // Add styled layer
       map.current.addLayer({
@@ -280,48 +314,177 @@ const MapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: MapDispla
       });
 
       // Add hover effects
-      map.current.on('mouseenter', layerId, (e) => {
-        if (e.features && e.features[0]) {
-          map.current!.getCanvas().style.cursor = 'pointer';
-          
-          const feature = e.features[0];
-          const props = feature.properties;
-          
-          const popup = new mapboxgl.Popup({ offset: [0, -15] })
-            .setLngLat(e.lngLat)
-            .setHTML(`
-              <div class="p-3">
-                <h3 class="font-bold mb-2">${props?.nom || 'Commune'}</h3>
-                <div class="space-y-1 text-sm">
-                  ${props?.population ? `<p>Population: ${parseInt(props.population).toLocaleString('fr-FR')}</p>` : ''}
-                  ${props?.nom_maire ? `<p>Maire: ${props.prenom_maire} ${props.nom_maire}</p>` : ''}
-                  ${props?.code_postal ? `<p>Code postal: ${props.code_postal}</p>` : ''}
-                </div>
-                <p class="text-xs text-muted-foreground mt-2">${mapData.description}</p>
-              </div>
-            `)
-            .addTo(map.current!);
-        }
-      });
+      addHoverEffects(layerId, mapData, dataLevel === 'departments' ? 'department' : 'commune');
 
-      map.current.on('mouseleave', layerId, () => {
-        map.current!.getCanvas().style.cursor = '';
-      });
-
-      console.log(`Styled ${communeData.length} communes based on: ${mapData.dataProperty}`);
+      console.log(`Styled ${dataLevel} based on: ${mapData.dataProperty}`);
       
     } catch (error) {
-      console.error('Error loading commune data:', error);
-      toast.error("Erreur lors du chargement des données communales");
+      console.error('Error loading geospatial data:', error);
+      toast.error("Erreur lors du chargement des données géographiques");
     }
   };
 
-  const generateColorExpression = (mapData: any, communeData: any[]) => {
-    const { dataProperty, colorScheme, colors } = mapData;
+  const loadEPCIData = async (mapData: any) => {
+    if (!map.current) return;
+
+    try {
+      // Load commune data and aggregate by EPCI
+      const response = await fetch('/data/com_bfc3.json');
+      const communeData = await response.json();
+      
+      // Group communes by EPCI
+      const epciGroups: { [key: string]: any[] } = {};
+      communeData.forEach((commune: any) => {
+        const epciKey = commune.properties?.libel_epci || 'Inconnu';
+        if (!epciGroups[epciKey]) {
+          epciGroups[epciKey] = [];
+        }
+        epciGroups[epciKey].push(commune);
+      });
+
+      // Create aggregated EPCI features (simplified - using first commune's geometry)
+      // In a real implementation, you'd want proper EPCI boundary data
+      const epciFeatures = Object.entries(epciGroups).map(([epciName, communes]) => {
+        const totalPopulation = communes.reduce((sum, commune) => {
+          return sum + (parseInt(commune.properties?.population || '0') || 0);
+        }, 0);
+
+        // Use the first commune's geometry as placeholder
+        // (ideally you'd have proper EPCI boundaries)
+        return {
+          type: 'Feature' as const,
+          properties: {
+            libel_epci: epciName,
+            population_totale: totalPopulation,
+            nb_communes: communes.length,
+            siren_epci: communes[0]?.properties?.siren_epci || ''
+          },
+          geometry: communes[0]?.geometry
+        };
+      });
+
+      const sourceId = 'epci-data';
+      const layerId = 'epci-styled';
+
+      // Remove existing layer and source if they exist
+      if (map.current.getLayer(layerId)) {
+        map.current.removeLayer(layerId);
+      }
+      if (map.current.getSource(sourceId)) {
+        map.current.removeSource(sourceId);
+      }
+
+      // Add source
+      map.current.addSource(sourceId, {
+        type: 'geojson',
+        data: {
+          type: 'FeatureCollection',
+          features: epciFeatures
+        }
+      });
+
+      // Generate color expression
+      const colorExpression = generateColorExpression(mapData, epciFeatures);
+
+      // Add styled layer
+      map.current.addLayer({
+        id: layerId,
+        type: 'fill',
+        source: sourceId,
+        paint: {
+          'fill-color': colorExpression,
+          'fill-opacity': 0.7,
+          'fill-outline-color': '#ffffff'
+        }
+      });
+
+      // Add hover effects
+      addHoverEffects(layerId, mapData, 'epci');
+
+      console.log(`Styled ${epciFeatures.length} EPCI based on: ${mapData.dataProperty}`);
+      
+    } catch (error) {
+      console.error('Error loading EPCI data:', error);
+      toast.error("Erreur lors du chargement des données EPCI");
+    }
+  };
+
+  const addHoverEffects = (layerId: string, mapData: any, dataType = 'commune') => {
+    if (!map.current) return;
+
+    map.current.on('mouseenter', layerId, (e) => {
+      if (e.features && e.features[0]) {
+        map.current!.getCanvas().style.cursor = 'pointer';
+        
+        const feature = e.features[0];
+        const props = feature.properties;
+        
+        let popupContent = '';
+        
+        if (dataType === 'epci') {
+          popupContent = `
+            <div class="p-3">
+              <h3 class="font-bold mb-2">${props?.libel_epci || 'EPCI'}</h3>
+              <div class="space-y-1 text-sm">
+                <p>Population totale: ${props?.population_totale?.toLocaleString('fr-FR') || 'N/A'}</p>
+                <p>Nombre de communes: ${props?.nb_communes || 'N/A'}</p>
+                ${props?.siren_epci ? `<p>SIREN: ${props.siren_epci}</p>` : ''}
+              </div>
+              <p class="text-xs text-muted-foreground mt-2">${mapData.description}</p>
+            </div>
+          `;
+        } else if (dataType === 'department') {
+          popupContent = `
+            <div class="p-3">
+              <h3 class="font-bold mb-2">${props?.libel_departement || 'Département'}</h3>
+              <div class="space-y-1 text-sm">
+                <p>Code: ${props?.code_departement || 'N/A'}</p>
+              </div>
+              <p class="text-xs text-muted-foreground mt-2">${mapData.description}</p>
+            </div>
+          `;
+        } else {
+          // Default commune popup
+          popupContent = `
+            <div class="p-3">
+              <h3 class="font-bold mb-2">${props?.nom || 'Commune'}</h3>
+              <div class="space-y-1 text-sm">
+                ${props?.population ? `<p>Population: ${parseInt(props.population).toLocaleString('fr-FR')}</p>` : ''}
+                ${props?.nom_maire ? `<p>Maire: ${props.prenom_maire} ${props.nom_maire}</p>` : ''}
+                ${props?.code_postal ? `<p>Code postal: ${props.code_postal}</p>` : ''}
+                ${props?.libel_epci ? `<p>EPCI: ${props.libel_epci}</p>` : ''}
+              </div>
+              <p class="text-xs text-muted-foreground mt-2">${mapData.description}</p>
+            </div>
+          `;
+        }
+        
+        const popup = new mapboxgl.Popup({ offset: [0, -15] })
+          .setLngLat(e.lngLat)
+          .setHTML(popupContent)
+          .addTo(map.current!);
+      }
+    });
+
+    map.current.on('mouseleave', layerId, () => {
+      map.current!.getCanvas().style.cursor = '';
+    });
+  };
+
+  const generateColorExpression = (mapData: any, featureData: any[]) => {
+    const { dataProperty, colorScheme, colors, dataLevel } = mapData;
     
     if (colorScheme === 'gradient' && dataProperty === 'population') {
-      // Calculate population ranges
-      const populations = communeData.map(f => parseInt(f.properties?.population || 0)).filter(p => p > 0);
+      // Calculate population ranges from the actual data
+      const populations = featureData.map(f => {
+        const pop = dataLevel === 'epci' 
+          ? f.properties?.population_totale 
+          : parseInt(f.properties?.population || 0);
+        return pop || 0;
+      }).filter(p => p > 0);
+      
+      if (populations.length === 0) return colors[0] || '#cccccc';
+      
       const min = Math.min(...populations);
       const max = Math.max(...populations);
       const ranges = [];
@@ -330,24 +493,31 @@ const MapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: MapDispla
         ranges.push(min + (max - min) * (i / (colors.length - 1)));
       }
       
+      const populationField = dataLevel === 'epci' ? 'population_totale' : 'population';
+      
       return [
         'case',
-        ['==', ['get', 'population'], null], '#cccccc',
-        ['<=', ['to-number', ['get', 'population']], ranges[1]], colors[0],
-        ['<=', ['to-number', ['get', 'population']], ranges[2]], colors[1],
-        ['<=', ['to-number', ['get', 'population']], ranges[3]], colors[2],
-        ['<=', ['to-number', ['get', 'population']], ranges[4]], colors[3],
+        ['==', ['get', populationField], null], '#cccccc',
+        ['<=', ['to-number', ['get', populationField]], ranges[1]], colors[0],
+        ['<=', ['to-number', ['get', populationField]], ranges[2]], colors[1],
+        ['<=', ['to-number', ['get', populationField]], ranges[3]], colors[2],
+        ['<=', ['to-number', ['get', populationField]], ranges[4]], colors[3],
         colors[4]
       ];
     }
     
     if (colorScheme === 'categorical') {
-      // For categorical data like department codes
-      return [
-        'case',
-        ['==', ['get', dataProperty], null], '#cccccc',
-        colors[0] // Default color for now
-      ];
+      // For categorical data like departments or EPCI names
+      const uniqueValues = [...new Set(featureData.map(f => f.properties?.[dataProperty]))].filter(Boolean);
+      const colorMap: any = ['case'];
+      
+      uniqueValues.forEach((value, index) => {
+        colorMap.push(['==', ['get', dataProperty], value]);
+        colorMap.push(colors[index % colors.length]);
+      });
+      
+      colorMap.push('#cccccc'); // default color
+      return colorMap;
     }
     
     // Default color
