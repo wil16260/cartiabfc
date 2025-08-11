@@ -109,7 +109,98 @@ const FileUpload = ({ onFilesUploaded }: FileUploadProps) => {
     }
   };
 
-  return null;
+  return (
+    <div className="w-full space-y-4">
+      {/* Drag and Drop Area */}
+      <div
+        className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+          dragActive
+            ? 'border-primary bg-primary/5'
+            : 'border-muted-foreground/25 hover:border-primary/50'
+        }`}
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+      >
+        <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+        <div className="space-y-2">
+          <p className="text-lg font-medium">Glissez vos fichiers ici</p>
+          <p className="text-sm text-muted-foreground">
+            ou{' '}
+            <Button
+              variant="link"
+              className="p-0 h-auto font-medium"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              parcourez vos fichiers
+            </Button>
+          </p>
+        </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          className="hidden"
+          accept=".xlsx,.xls,.csv,.geojson,.gpkg,.kml"
+          onChange={handleFileInput}
+        />
+      </div>
+
+      {/* Supported Formats */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+        {supportedFormats.map((format, index) => {
+          const IconComponent = format.icon;
+          return (
+            <div key={index} className="flex items-center gap-2 p-2 rounded-md bg-muted/50">
+              <IconComponent className="h-4 w-4 text-muted-foreground" />
+              <div className="text-xs">
+                <div className="font-medium">{format.ext}</div>
+                <div className="text-muted-foreground">{format.description}</div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Uploaded Files List */}
+      {uploadedFiles.length > 0 && (
+        <Card>
+          <CardContent className="p-4">
+            <h4 className="font-medium mb-3">Fichiers téléchargés ({uploadedFiles.length})</h4>
+            <div className="space-y-2">
+              {uploadedFiles.map((file, index) => {
+                const IconComponent = getFileIcon(file.name);
+                return (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-2 rounded-md bg-muted/30"
+                  >
+                    <div className="flex items-center gap-2">
+                      <IconComponent className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <div className="font-medium text-sm">{file.name}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {(file.size / 1024).toFixed(1)} KB
+                        </div>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeFile(index)}
+                      className="h-8 w-8 p-0"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
 };
 
 export default FileUpload;
