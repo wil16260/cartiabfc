@@ -4,7 +4,7 @@ import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, Share2, Edit3, Maximize2 } from "lucide-react";
+import { Download, Share2, Edit3, Maximize2, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 
@@ -14,9 +14,20 @@ interface MapDisplayProps {
   visibleLayers?: string[];
 }
 
+interface MapConfig {
+  title: string;
+  credits: string;
+}
+
 const MapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: MapDisplayProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
+  const [mapConfig, setMapConfig] = useState<MapConfig>({
+    title: "Carte de Bourgogne-Franche-Comté",
+    credits: "Données: IGN, INSEE | Réalisé avec Lovable"
+  });
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [tempTitle, setTempTitle] = useState(mapConfig.title);
 
   useEffect(() => {
     if (!mapContainer.current) return;
@@ -46,9 +57,10 @@ const MapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: MapDispla
       unit: 'metric'
     }), 'bottom-left');
 
-    // Load GeoJSON templates from Supabase
+    // Load GeoJSON templates from Supabase and department boundaries
     map.current.on('load', () => {
       loadGeoJSONTemplates();
+      loadDepartmentBoundaries();
     });
 
     return () => {
@@ -85,6 +97,55 @@ const MapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: MapDispla
     } catch (error) {
       console.error('Erreur lors du chargement des modèles GeoJSON:', error);
       toast.error("Erreur lors du chargement des couches de la carte");
+    }
+  };
+
+  const loadDepartmentBoundaries = async () => {
+    if (!map.current) return;
+
+    try {
+      // Load department boundaries 
+      const response = await fetch('/data/dpt_bfc.geojsonl.json');
+      const text = await response.text();
+      const lines = text.trim().split('\n');
+      const features = lines.map(line => JSON.parse(line));
+      
+      const deptSourceId = 'department-boundaries';
+      const deptLayerId = 'department-boundaries-outline';
+
+      // Remove existing if present
+      if (map.current.getLayer(deptLayerId)) {
+        map.current.removeLayer(deptLayerId);
+      }
+      if (map.current.getSource(deptSourceId)) {
+        map.current.removeSource(deptSourceId);
+      }
+
+      // Add department boundaries source
+      map.current.addSource(deptSourceId, {
+        type: 'geojson',
+        data: {
+          type: 'FeatureCollection',
+          features: features
+        }
+      });
+
+      // Add yellow outline for departments (always visible)
+      map.current.addLayer({
+        id: deptLayerId,
+        type: 'line',
+        source: deptSourceId,
+        paint: {
+          'line-color': '#fbbf24', // Yellow color
+          'line-width': 2,
+          'line-opacity': 0.8
+        }
+      });
+
+      console.log('Department boundaries loaded with yellow outline');
+      
+    } catch (error) {
+      console.error('Error loading department boundaries:', error);
     }
   };
 
@@ -226,7 +287,13 @@ const MapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: MapDispla
 
       const mapData = data.mapData;
       
-      // Load and style commune data based on AI response
+      // Update map title if AI provided one
+      if (mapData.title) {
+        setMapConfig(prev => ({ ...prev, title: mapData.title }));
+        setTempTitle(mapData.title);
+      }
+      
+      // Load and style data based on AI response
       await loadCommuneDataWithStyling(mapData);
       
       toast.success(`Carte générée: ${mapData.title}`);
@@ -555,11 +622,55 @@ const MapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: MapDispla
     }
   };
 
+  const handleTitleEdit = () => {
+    setIsEditingTitle(true);
+    setTempTitle(mapConfig.title);
+  };
+
+  const handleTitleSave = () => {
+    setMapConfig(prev => ({ ...prev, title: tempTitle }));
+    setIsEditingTitle(false);
+  };
+
+  const handleTitleCancel = () => {
+    setTempTitle(mapConfig.title);
+    setIsEditingTitle(false);
+  };
+
   return (
     <Card className="h-full">
       <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">Carte générée</CardTitle>
+          <div className="flex items-center gap-2">
+            {isEditingTitle ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={tempTitle}
+                  onChange={(e) => setTempTitle(e.target.value)}
+                  className="text-lg font-semibold bg-transparent border-b border-gray-300 focus:border-primary outline-none"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleTitleSave();
+                    if (e.key === 'Escape') handleTitleCancel();
+                  }}
+                  autoFocus
+                />
+                <Button variant="outline" size="sm" onClick={handleTitleSave}>
+                  <Check className="h-4 w-4" />
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleTitleCancel}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-lg">{mapConfig.title}</CardTitle>
+                <Button variant="ghost" size="sm" onClick={handleTitleEdit}>
+                  <Edit3 className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+          </div>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={handleEdit}>
               <Edit3 className="h-4 w-4" />
@@ -591,6 +702,19 @@ const MapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: MapDispla
               </div>
             </div>
           )}
+          
+          {/* Credits overlay */}
+          <div className="absolute bottom-2 right-2 bg-white/90 backdrop-blur-sm rounded px-2 py-1 text-xs text-gray-600 shadow-sm">
+            {mapConfig.credits}
+          </div>
+          
+          {/* Legend for department boundaries */}
+          <div className="absolute top-2 left-2 bg-white/90 backdrop-blur-sm rounded px-3 py-2 text-sm shadow-sm">
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-0.5 bg-yellow-400"></div>
+              <span>Limites départementales</span>
+            </div>
+          </div>
         </div>
         
         <div className="p-4 border-t bg-muted/50">
