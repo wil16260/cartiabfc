@@ -32,8 +32,9 @@ const MapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: MapDispla
   useEffect(() => {
     if (!mapContainer.current) return;
 
-    // Initialize map with focus on France
-    const token = "pk.eyJ1IjoibG92YWJsZSIsImEiOiJjbHo4cjlna2YwaXluMmxtbnBnOXJsZnE3In0.RjGVN2vN6xyGbq7ZB3gqfw";
+    // Initialize map with focus on France - using public Mapbox token
+    // For production, add your own token to Supabase Edge Function Secrets
+    const token = "pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw"; // Mapbox demo token
     mapboxgl.accessToken = token;
     
     map.current = new mapboxgl.Map({
