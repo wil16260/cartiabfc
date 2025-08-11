@@ -49,7 +49,7 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: aiConfig.system_prompt || 'Vous êtes un assistant IA géospatial expert qui aide les utilisateurs à créer de belles cartes précises de la région Bourgogne-Franche-Comté.'
+            content: aiConfig.system_prompt || 'Vous êtes un assistant IA géospatial expert qui aide les utilisateurs à créer de belles cartes précises de la région Bourgogne-Franche-Comté en utilisant les données communales disponibles.'
           },
           {
             role: 'user',
@@ -58,17 +58,31 @@ serve(async (req) => {
             Répondez avec un JSON contenant:
             - title: Un titre descriptif pour la carte
             - description: Une description détaillée de ce qui doit être affiché
-            - layers: Un tableau des couches à activer/désactiver
-            - style: Des suggestions de style pour la carte
+            - dataProperty: La propriété à utiliser pour colorer les communes (ex: "population", "code_departement", "code_postal")
+            - colorScheme: Le schéma de couleur ("gradient", "categorical", "threshold")
+            - colors: Un tableau de couleurs à utiliser (5 couleurs pour gradient, 3-8 pour categorical)
             - analysis: Une analyse géographique pertinente
             
-            Exemple de format de réponse:
+            Données disponibles par commune: nom, code_insee, statut, code_postal, code_departement, nom_maire, prenom_maire, libel_epci, siren_epci, population
+            
+            Exemple de format de réponse pour une demande sur la population:
             {
-              "title": "Titre de la carte",
-              "description": "Description détaillée",
-              "layers": ["data_population", "data_unemployment"],
-              "style": "Style suggéré",
-              "analysis": "Analyse géographique"
+              "title": "Population par commune en Bourgogne-Franche-Comté",
+              "description": "Visualisation des données démographiques par commune",
+              "dataProperty": "population",
+              "colorScheme": "gradient",
+              "colors": ["#fee5d9", "#fcae91", "#fb6a4a", "#de2d26", "#a50f15"],
+              "analysis": "Les communes les plus peuplées se concentrent autour des centres urbains principaux comme Dijon, Besançon et Chalon-sur-Saône."
+            }
+            
+            Exemple pour les départements:
+            {
+              "title": "Départements de Bourgogne-Franche-Comté",
+              "description": "Visualisation par département",
+              "dataProperty": "code_departement",
+              "colorScheme": "categorical",
+              "colors": ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b", "#e377c2", "#7f7f7f"],
+              "analysis": "La région comprend 8 départements: Côte-d'Or (21), Doubs (25), Jura (39), Nièvre (58), Haute-Saône (70), Savoie (71), Territoire de Belfort (90), Yonne (89)."
             }`
           }
         ],
@@ -84,17 +98,42 @@ serve(async (req) => {
     const data = await response.json()
     const generatedContent = data.choices[0].message.content
 
-    // Try to parse JSON response, fallback to text
+    // Try to parse JSON response, fallback to default
     let mapData
     try {
       mapData = JSON.parse(generatedContent)
     } catch {
-      mapData = {
-        title: "Carte générée",
-        description: generatedContent,
-        layers: [],
-        style: "default",
-        analysis: "Analyse en cours..."
+      // Default fallback based on prompt analysis
+      const isPopulationRelated = prompt.toLowerCase().includes('population') || prompt.toLowerCase().includes('démographie') || prompt.toLowerCase().includes('habitant')
+      const isDepartmentRelated = prompt.toLowerCase().includes('département') || prompt.toLowerCase().includes('departement')
+      
+      if (isPopulationRelated) {
+        mapData = {
+          title: "Population par commune",
+          description: "Visualisation de la répartition démographique",
+          dataProperty: "population",
+          colorScheme: "gradient",
+          colors: ["#fee5d9", "#fcae91", "#fb6a4a", "#de2d26", "#a50f15"],
+          analysis: "Carte basée sur les données de population des communes."
+        }
+      } else if (isDepartmentRelated) {
+        mapData = {
+          title: "Départements de la région",
+          description: "Visualisation par département",
+          dataProperty: "code_departement",
+          colorScheme: "categorical",
+          colors: ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b", "#e377c2", "#7f7f7f"],
+          analysis: "Carte des 8 départements de Bourgogne-Franche-Comté."
+        }
+      } else {
+        mapData = {
+          title: "Carte générée",
+          description: generatedContent,
+          dataProperty: "population",
+          colorScheme: "gradient",
+          colors: ["#3b82f6", "#60a5fa", "#93c5fd", "#bfdbfe", "#dbeafe"],
+          analysis: "Analyse en cours..."
+        }
       }
     }
 

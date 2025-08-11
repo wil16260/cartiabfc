@@ -213,43 +213,145 @@ const MapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: MapDispla
     });
   };
 
-  const simulateMapGeneration = (prompt: string) => {
+  const simulateMapGeneration = async (prompt: string) => {
     if (!map.current) return;
 
-    // Add example markers based on prompt content
-    const locations = [
-      { name: "Paris", coords: [2.3522, 48.8566], data: { population: 2161000, unemployment: 7.8 } },
-      { name: "Marseille", coords: [5.3698, 43.2965], data: { population: 861635, unemployment: 9.2 } },
-      { name: "Lyon", coords: [4.8357, 45.7640], data: { population: 513275, unemployment: 6.9 } },
-      { name: "Toulouse", coords: [1.4442, 43.6047], data: { population: 471941, unemployment: 7.1 } },
-      { name: "Nice", coords: [7.2619, 43.7102], data: { population: 342522, unemployment: 8.3 } }
-    ];
+    try {
+      // Call the edge function to get AI-generated map configuration
+      const { data, error } = await supabase.functions.invoke('generate-map-with-mistral', {
+        body: { prompt }
+      });
 
-    // Clear existing markers
-    const existingMarkers = document.querySelectorAll('.mapboxgl-marker');
-    existingMarkers.forEach(marker => marker.remove());
+      if (error) throw error;
 
-    locations.forEach(location => {
-      const markerColor = prompt.toLowerCase().includes('chômage') || prompt.toLowerCase().includes('unemployment')
-        ? (location.data.unemployment > 8 ? '#ef4444' : '#22c55e')
-        : 'hsl(var(--primary))';
+      const mapData = data.mapData;
+      
+      // Load and style commune data based on AI response
+      await loadCommuneDataWithStyling(mapData);
+      
+      toast.success(`Carte générée: ${mapData.title}`);
+    } catch (error) {
+      console.error('Error generating map:', error);
+      toast.error("Erreur lors de la génération de la carte");
+    }
+  };
 
-      new mapboxgl.Marker({ color: markerColor })
-        .setLngLat(location.coords as [number, number])
-        .setPopup(new mapboxgl.Popup().setHTML(`
-          <div class="p-3">
-            <h3 class="font-bold mb-2">${location.name}</h3>
-            <div class="space-y-1 text-sm">
-              <p>Population: ${location.data.population.toLocaleString('fr-FR')}</p>
-              <p>Chômage: ${location.data.unemployment}%</p>
-            </div>
-            <p class="text-xs text-muted-foreground mt-2">Prompt: "${prompt}"</p>
-          </div>
-        `))
-        .addTo(map.current!);
-    });
+  const loadCommuneDataWithStyling = async (mapData: any) => {
+    if (!map.current) return;
 
-    toast.success("Carte générée avec succès !");
+    try {
+      // Load commune GeoJSON data
+      const response = await fetch('/data/com_bfc3.json');
+      const communeData = await response.json();
+      
+      const sourceId = 'communes-data';
+      const layerId = 'communes-styled';
+
+      // Remove existing layer and source if they exist
+      if (map.current.getLayer(layerId)) {
+        map.current.removeLayer(layerId);
+      }
+      if (map.current.getSource(sourceId)) {
+        map.current.removeSource(sourceId);
+      }
+
+      // Add source
+      map.current.addSource(sourceId, {
+        type: 'geojson',
+        data: {
+          type: 'FeatureCollection',
+          features: communeData
+        }
+      });
+
+      // Generate color expression based on AI response
+      const colorExpression = generateColorExpression(mapData, communeData);
+
+      // Add styled layer
+      map.current.addLayer({
+        id: layerId,
+        type: 'fill',
+        source: sourceId,
+        paint: {
+          'fill-color': colorExpression,
+          'fill-opacity': 0.7,
+          'fill-outline-color': '#ffffff'
+        }
+      });
+
+      // Add hover effects
+      map.current.on('mouseenter', layerId, (e) => {
+        if (e.features && e.features[0]) {
+          map.current!.getCanvas().style.cursor = 'pointer';
+          
+          const feature = e.features[0];
+          const props = feature.properties;
+          
+          const popup = new mapboxgl.Popup({ offset: [0, -15] })
+            .setLngLat(e.lngLat)
+            .setHTML(`
+              <div class="p-3">
+                <h3 class="font-bold mb-2">${props?.nom || 'Commune'}</h3>
+                <div class="space-y-1 text-sm">
+                  ${props?.population ? `<p>Population: ${parseInt(props.population).toLocaleString('fr-FR')}</p>` : ''}
+                  ${props?.nom_maire ? `<p>Maire: ${props.prenom_maire} ${props.nom_maire}</p>` : ''}
+                  ${props?.code_postal ? `<p>Code postal: ${props.code_postal}</p>` : ''}
+                </div>
+                <p class="text-xs text-muted-foreground mt-2">${mapData.description}</p>
+              </div>
+            `)
+            .addTo(map.current!);
+        }
+      });
+
+      map.current.on('mouseleave', layerId, () => {
+        map.current!.getCanvas().style.cursor = '';
+      });
+
+      console.log(`Styled ${communeData.length} communes based on: ${mapData.dataProperty}`);
+      
+    } catch (error) {
+      console.error('Error loading commune data:', error);
+      toast.error("Erreur lors du chargement des données communales");
+    }
+  };
+
+  const generateColorExpression = (mapData: any, communeData: any[]) => {
+    const { dataProperty, colorScheme, colors } = mapData;
+    
+    if (colorScheme === 'gradient' && dataProperty === 'population') {
+      // Calculate population ranges
+      const populations = communeData.map(f => parseInt(f.properties?.population || 0)).filter(p => p > 0);
+      const min = Math.min(...populations);
+      const max = Math.max(...populations);
+      const ranges = [];
+      
+      for (let i = 0; i < colors.length; i++) {
+        ranges.push(min + (max - min) * (i / (colors.length - 1)));
+      }
+      
+      return [
+        'case',
+        ['==', ['get', 'population'], null], '#cccccc',
+        ['<=', ['to-number', ['get', 'population']], ranges[1]], colors[0],
+        ['<=', ['to-number', ['get', 'population']], ranges[2]], colors[1],
+        ['<=', ['to-number', ['get', 'population']], ranges[3]], colors[2],
+        ['<=', ['to-number', ['get', 'population']], ranges[4]], colors[3],
+        colors[4]
+      ];
+    }
+    
+    if (colorScheme === 'categorical') {
+      // For categorical data like department codes
+      return [
+        'case',
+        ['==', ['get', dataProperty], null], '#cccccc',
+        colors[0] // Default color for now
+      ];
+    }
+    
+    // Default color
+    return colors[0] || '#3b82f6';
   };
 
   const handleExportPDF = () => {
