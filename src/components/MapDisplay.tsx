@@ -32,9 +32,16 @@ const MapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: MapDispla
   useEffect(() => {
     if (!mapContainer.current) return;
 
-    // Initialize map with focus on France - using public Mapbox token
-    // For production, add your own token to Supabase Edge Function Secrets
-    const token = "pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw"; // Mapbox demo token
+    // Get Mapbox token from environment or use fallback
+    // You need to add your Mapbox public token to continue using maps
+    const token = import.meta.env.VITE_MAPBOX_TOKEN || "YOUR_MAPBOX_TOKEN_HERE";
+    
+    if (token === "YOUR_MAPBOX_TOKEN_HERE") {
+      console.error("Please add your Mapbox public token");
+      toast.error("Token Mapbox requis - veuillez configurer votre token");
+      return;
+    }
+    
     mapboxgl.accessToken = token;
     
     map.current = new mapboxgl.Map({
