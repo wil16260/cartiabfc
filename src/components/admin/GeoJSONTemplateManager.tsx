@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { toast } from '@/hooks/use-toast'
 import { supabase } from '@/lib/supabase'
-import { Plus, MapPin, Settings, Trash2, Loader2 } from 'lucide-react'
+import { Plus, MapPin, Settings, Trash2, Loader2, Building2 } from 'lucide-react'
 
 interface GeoJSONTemplate {
   id: string
@@ -220,10 +220,28 @@ const GeoJSONTemplateManager = () => {
             Gérez les modèles de données géographiques pour la carte
           </p>
         </div>
-        <Button onClick={() => setShowForm(true)} className="flex items-center gap-2">
-          <Plus className="h-4 w-4" />
-          Nouveau modèle
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            onClick={() => {
+              setName('EPCI')
+              setDescription('Établissements Publics de Coopération Intercommunale')
+              setGeojsonUrl('/data/epci.geojsonl.json')
+              setProperties('{"type": "epci", "displayField": "nom_epci"}')
+              setStyleConfig('{"fillColor": "#ff7800", "weight": 2, "opacity": 0.8, "fillOpacity": 0.5}')
+              setIsActive(true)
+              setShowForm(true)
+            }}
+            variant="outline" 
+            className="flex items-center gap-2"
+          >
+            <Building2 className="h-4 w-4" />
+            Modèle EPCI
+          </Button>
+          <Button onClick={() => setShowForm(true)} className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Nouveau modèle
+          </Button>
+        </div>
       </div>
 
       {showForm && (

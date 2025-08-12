@@ -9,13 +9,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Settings, Cpu, Palette, Activity, Save, LogOut, BarChart3, MapPin, Eye, EyeOff, FileText, Building2 } from "lucide-react";
+import { Settings, Cpu, Palette, Activity, Save, LogOut, BarChart3, MapPin, Eye, EyeOff, FileText } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 import GeoJSONTemplateManager from "@/components/admin/GeoJSONTemplateManager";
 import DocumentManager from "@/components/admin/DocumentManager";
-import EPCIManager from "@/components/admin/EPCIManager";
 
 const Admin = () => {
   const { user, isAdmin, loading, signOut } = useAuth();
@@ -174,7 +173,7 @@ const Admin = () => {
         </div>
 
         <Tabs defaultValue="ai-config" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-7">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="ai-config" className="gap-2">
               <Cpu className="h-4 w-4" />
               Configuration IA
@@ -190,10 +189,6 @@ const Admin = () => {
             <TabsTrigger value="geojson" className="gap-2">
               <MapPin className="h-4 w-4" />
               GeoJSON
-            </TabsTrigger>
-            <TabsTrigger value="epci" className="gap-2">
-              <Building2 className="h-4 w-4" />
-              EPCI
             </TabsTrigger>
             <TabsTrigger value="analytics" className="gap-2">
               <Activity className="h-4 w-4" />
@@ -294,9 +289,6 @@ const Admin = () => {
             <GeoJSONTemplateManager />
           </TabsContent>
 
-          <TabsContent value="epci" className="space-y-6">
-            <EPCIManager />
-          </TabsContent>
 
           <TabsContent value="analytics">
             <Card>
