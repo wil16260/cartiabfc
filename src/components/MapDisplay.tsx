@@ -443,54 +443,91 @@ const MapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: MapDispla
   };
 
   const loadEPCIData = async (mapData: any) => {
-    if (!map.current) return;
-
+    console.log('Loading EPCI data with mapData:', mapData);
+    
     try {
-      // Load proper EPCI boundary data
-      const response = await fetch('/data/epci.geojsonl.json');
-      const text = await response.text();
-      const lines = text.trim().split('\n');
-      const epciFeatures = lines.map(line => JSON.parse(line));
-
-      // Load commune data to aggregate statistics by EPCI
-      const communeResponse = await fetch('/data/com_bfc3.json');
-      const communeData = await communeResponse.json();
+      // Load EPCI boundaries from the dedicated file
+      const epciResponse = await fetch('/data/epci.geojsonl.json');
+      const epciText = await epciResponse.text();
+      const epciLines = epciText.trim().split('\n');
+      const epciFeatures = epciLines.map(line => JSON.parse(line));
       
-      // Group communes by EPCI SIREN to aggregate data
-      const epciStats: { [key: string]: any } = {};
-      communeData.forEach((commune: any) => {
-        const sirenEpci = commune.properties?.siren_epci;
-        if (sirenEpci) {
-          if (!epciStats[sirenEpci]) {
-            epciStats[sirenEpci] = {
-              population_totale: 0,
-              nb_communes: 0,
-              libel_epci: commune.properties?.libel_epci || 'Inconnu'
-            };
-          }
-          epciStats[sirenEpci].population_totale += parseInt(commune.properties?.population || '0') || 0;
-          epciStats[sirenEpci].nb_communes += 1;
-        }
-      });
-
-      // Enhance EPCI features with aggregated data
-      const enhancedFeatures = epciFeatures.map(feature => {
-        const sirenEpci = feature.properties?.siren_epci;
-        const stats = epciStats[sirenEpci] || { population_totale: 0, nb_communes: 0 };
+      // If mapData contains specific data to join with SIREN
+      let enhancedFeatures = epciFeatures;
+      
+      if (mapData.data && Array.isArray(mapData.data)) {
+        // Join external data with EPCI using SIREN column
+        enhancedFeatures = epciFeatures.map(feature => {
+          const sirenEpci = feature.properties.siren_epci;
+          // Find matching data by SIREN
+          const matchingData = mapData.data.find(item => 
+            item.siren === sirenEpci || 
+            item.siren_epci === sirenEpci ||
+            item.SIREN === sirenEpci ||
+            item.code === sirenEpci
+          );
+          
+          return {
+            ...feature,
+            properties: {
+              ...feature.properties,
+              ...(matchingData || {})
+            }
+          };
+        });
+      } else {
+        // Fallback: Load commune data for aggregation if no external data
+        const communeResponse = await fetch('/data/com_bfc3.json');
+        const communeData = await communeResponse.json();
         
-        return {
-          ...feature,
-          properties: {
-            ...feature.properties,
-            population_totale: stats.population_totale,
-            nb_communes: stats.nb_communes
+        // Aggregate commune statistics by EPCI SIREN
+        const epciStats = {};
+        communeData.forEach(commune => {
+          const sirenEpci = commune.siren_epci;
+          if (sirenEpci) {
+            if (!epciStats[sirenEpci]) {
+              epciStats[sirenEpci] = {
+                population: 0,
+                communes: 0,
+                ...Object.keys(commune).reduce((acc, key) => {
+                  if (typeof commune[key] === 'number' && key !== 'siren_epci') {
+                    acc[key] = 0;
+                  }
+                  return acc;
+                }, {})
+              };
+            }
+            
+            epciStats[sirenEpci].population += commune.pop_municipale || 0;
+            epciStats[sirenEpci].communes += 1;
+            
+            // Aggregate other numeric fields
+            Object.keys(commune).forEach(key => {
+              if (typeof commune[key] === 'number' && key !== 'siren_epci' && key !== 'pop_municipale') {
+                epciStats[sirenEpci][key] += commune[key] || 0;
+              }
+            });
           }
-        };
-      });
-
+        });
+        
+        // Enhance EPCI features with aggregated data
+        enhancedFeatures = epciFeatures.map(feature => {
+          const sirenEpci = feature.properties.siren_epci;
+          const stats = epciStats[sirenEpci] || {};
+          
+          return {
+            ...feature,
+            properties: {
+              ...feature.properties,
+              ...stats
+            }
+          };
+        });
+      }
+      
       const sourceId = 'epci-data';
       const layerId = 'epci-styled';
-
+      
       // Remove existing layer and source if they exist
       if (map.current.getLayer(layerId)) {
         map.current.removeLayer(layerId);
@@ -498,19 +535,19 @@ const MapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: MapDispla
       if (map.current.getSource(sourceId)) {
         map.current.removeSource(sourceId);
       }
-
-      // Add source
+      
+      // Add source with enhanced features
       map.current.addSource(sourceId, {
         type: 'geojson',
         data: {
           type: 'FeatureCollection',
-          features: epciFeatures
+          features: enhancedFeatures
         }
       });
-
-      // Generate color expression
-      const colorExpression = generateColorExpression(mapData, epciFeatures);
-
+      
+      // Generate color expression with Jenks analysis
+      const colorExpression = generateColorExpressionWithJenks(mapData, enhancedFeatures) as any;
+      
       // Add styled layer
       map.current.addLayer({
         id: layerId,
@@ -518,19 +555,17 @@ const MapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: MapDispla
         source: sourceId,
         paint: {
           'fill-color': colorExpression,
-          'fill-opacity': 0.7,
-          'fill-outline-color': '#ffffff'
+          'fill-opacity': 0.7
         }
       });
-
+      
       // Add hover effects
       addHoverEffects(layerId, mapData, 'epci');
-
-      console.log(`Styled ${epciFeatures.length} EPCI based on: ${mapData.dataProperty}`);
+      
+      console.log('EPCI data loaded successfully with', enhancedFeatures.length, 'features');
       
     } catch (error) {
       console.error('Error loading EPCI data:', error);
-      toast.error("Erreur lors du chargement des données EPCI");
     }
   };
 
@@ -594,6 +629,116 @@ const MapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: MapDispla
     map.current.on('mouseleave', layerId, () => {
       map.current!.getCanvas().style.cursor = '';
     });
+  };
+
+  // Jenks natural breaks algorithm implementation
+  const jenksBreaks = (data: number[], numClasses: number): number[] => {
+    if (data.length <= numClasses) return data.sort((a, b) => a - b);
+    
+    const sortedData = [...data].sort((a, b) => a - b);
+    const n = sortedData.length;
+    
+    // Initialize matrices
+    const mat1 = Array(n + 1).fill(null).map(() => Array(numClasses + 1).fill(0));
+    const mat2 = Array(n + 1).fill(null).map(() => Array(numClasses + 1).fill(0));
+    
+    // Initialize first column and row
+    for (let i = 1; i <= numClasses; i++) {
+      mat1[1][i] = 1;
+      mat2[1][i] = 0;
+      for (let j = 2; j <= n; j++) {
+        mat2[j][i] = Infinity;
+      }
+    }
+    
+    // Calculate variance
+    const variance = (data: number[], start: number, end: number): number => {
+      const slice = data.slice(start, end + 1);
+      const mean = slice.reduce((a, b) => a + b, 0) / slice.length;
+      return slice.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0);
+    };
+    
+    // Fill matrices
+    for (let l = 2; l <= n; l++) {
+      let s1 = 0;
+      let s2 = 0;
+      let w = 0;
+      for (let m = 1; m <= l; m++) {
+        const val = sortedData[l - m];
+        s2 += val * val;
+        s1 += val;
+        w++;
+        const variance_val = s2 - (s1 * s1) / w;
+        const i4 = l - m + 1;
+        if (i4 !== 1) {
+          for (let j = 2; j <= numClasses; j++) {
+            if (mat2[l][j] >= (variance_val + mat2[i4 - 1][j - 1])) {
+              mat1[l][j] = i4;
+              mat2[l][j] = variance_val + mat2[i4 - 1][j - 1];
+            }
+          }
+        }
+      }
+      mat1[l][1] = 1;
+      mat2[l][1] = variance(sortedData, 0, l - 1);
+    }
+    
+    // Extract breaks
+    const breaks = [sortedData[0]];
+    let k = n;
+    for (let j = numClasses; j >= 2; j--) {
+      const id = mat1[k][j] - 2;
+      breaks.unshift(sortedData[id]);
+      k = mat1[k][j] - 1;
+    }
+    breaks.push(sortedData[n - 1]);
+    
+    return breaks;
+  };
+
+  const generateColorExpressionWithJenks = (mapData: any, featureData: any[]): string | any[] => {
+    console.log('Generating color expression with Jenks for:', mapData);
+    
+    if (!mapData.field || !mapData.colors) {
+      return '#cccccc';
+    }
+    
+    // Extract values for the specified field
+    const values = featureData
+      .map(feature => feature.properties[mapData.field])
+      .filter(val => val !== null && val !== undefined && !isNaN(val))
+      .map(val => Number(val));
+    
+    if (values.length === 0) {
+      return '#cccccc';
+    }
+    
+    // Apply Jenks natural breaks
+    const numClasses = Math.min(mapData.colors.length, 5);
+    const breaks = jenksBreaks(values, numClasses);
+    
+    console.log('Jenks breaks for', mapData.field, ':', breaks);
+    
+    // Build Mapbox expression
+    const expression: any[] = ['case'];
+    
+    for (let i = 0; i < breaks.length - 1; i++) {
+      const min = breaks[i];
+      const max = breaks[i + 1];
+      const color = mapData.colors[i] || mapData.colors[mapData.colors.length - 1];
+      
+      if (i === breaks.length - 2) {
+        // Last class includes maximum value
+        expression.push(['<=', ['get', mapData.field], max], color);
+      } else {
+        expression.push(['<', ['get', mapData.field], max], color);
+      }
+    }
+    
+    // Default color
+    expression.push('#cccccc');
+    
+    return expression;
   };
 
   const generateColorExpression = (mapData: any, featureData: any[]) => {
