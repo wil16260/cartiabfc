@@ -32,13 +32,21 @@ serve(async (req) => {
       .select('*')
       .eq('is_active', true)
       .order('created_at', { ascending: false })
-      .maybeSingle()
+      .limit(1)
 
-    if (configError || !aiConfig) {
+    console.log('AI Config query result:', { aiConfig, configError })
+
+    if (configError) {
+      console.error('AI config database error:', configError)
+      throw new Error(`Database error: ${configError.message}`)
+    }
+
+    if (!aiConfig || aiConfig.length === 0) {
+      console.error('No active AI configuration found in database')
       throw new Error('No active AI configuration found')
     }
 
-    const activeConfig = aiConfig
+    const activeConfig = aiConfig[0]
 
     // Generate map description with Mistral
     const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
