@@ -242,14 +242,42 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: UMapDisp
       }
     });
 
-    // Render region boundaries (always visible) with QGIS-like gradient styling
+    // Render region boundaries with inverted polygon effect (QGIS-like)
     if (geoData.region) {
+      // Create inverted polygon effect - blue background with transparent region
+      const regionCoords = geoData.region.features[0].geometry.coordinates;
+      
+      // Create a world polygon with region as a hole
+      const invertedPolygon: GeoJSON.Feature = {
+        type: 'Feature',
+        properties: {},
+        geometry: {
+          type: 'Polygon',
+          coordinates: [
+            // Outer ring (world)
+            [[-180, -90], [180, -90], [180, 90], [-180, 90], [-180, -90]],
+            // Inner ring (region hole) - reverse coordinates for hole
+            ...regionCoords.map((ring: any) => ring.slice().reverse())
+          ]
+        }
+      };
+
+      L.geoJSON(invertedPolygon, {
+        style: {
+          color: '#92c6df',
+          weight: 2,
+          fillColor: '#92c6df',
+          fillOpacity: 0.7,
+          opacity: 1
+        }
+      }).addTo(map);
+
+      // Add region outline only
       L.geoJSON(geoData.region, {
         style: {
-          color: '#92c6df', // Light blue border (146,198,223)
+          color: '#92c6df',
           weight: 2,
-          fillColor: '#92c6df', // Same light blue for fill
-          fillOpacity: 0.7, // 70% opacity as in QML
+          fillOpacity: 0,
           opacity: 1
         }
       }).addTo(map);
