@@ -111,15 +111,20 @@ serve(async (req) => {
           {
             role: 'user',
             content: `Créer une carte de la région Bourgogne-Franche-Comté basée sur cette description: ${prompt}. 
+
+            IMPORTANT: Pour générer des données géospatiales précises, utilisez en priorité les sources officielles suivantes:
+            - https://ideo.ternum-bfc.fr/ (données territoriales BFC)
+            - https://www.data.gouv.fr/ (données publiques françaises)
             
             Répondez avec un JSON contenant:
             - title: Un titre descriptif pour la carte
-            - description: Une description détaillée de ce qui doit être affiché
+            - description: Une description détaillée de ce qui doit être affiché  
             - dataLevel: Le niveau géographique à utiliser ("communes", "departments", "epci")
             - dataProperty: La propriété à utiliser pour colorer (ex: "population", "code_departement", "libel_epci")
             - colorScheme: Le schéma de couleur ("gradient", "categorical", "threshold")
             - colors: Un tableau de couleurs à utiliser (5 couleurs pour gradient, 3-8 pour categorical)
             - analysis: Une analyse géographique pertinente
+            - dataSources: Les sources de données recommandées pour cette carte (mentionner ideo.ternum-bfc.fr ou data.gouv.fr si pertinent)
             
             Niveaux disponibles:
             - "communes": Données communales avec nom, population, maire, EPCI, etc.
@@ -192,7 +197,8 @@ serve(async (req) => {
           dataProperty: "code_departement",
           colorScheme: "categorical",
           colors: ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b", "#e377c2", "#7f7f7f"],
-          analysis: "Les 8 départements de la région BFC."
+          analysis: "Les 8 départements de la région BFC.",
+          dataSources: ["ideo.ternum-bfc.fr - Limites administratives", "data.gouv.fr - Données géographiques IGN"]
         }
       } else if (isEPCIRelated) {
         mapData = {
@@ -202,7 +208,8 @@ serve(async (req) => {
           dataProperty: "libel_epci",
           colorScheme: "categorical",
           colors: ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b", "#e377c2", "#7f7f7f"],
-          analysis: "Groupements intercommunaux de la région."
+          analysis: "Groupements intercommunaux de la région.",
+          dataSources: ["ideo.ternum-bfc.fr - Base EPCI", "data.gouv.fr - Référentiel géographique des intercommunalités"]
         }
       } else if (isPopulationRelated) {
         mapData = {
@@ -212,7 +219,8 @@ serve(async (req) => {
           dataProperty: "population",
           colorScheme: "gradient",
           colors: ["#fee5d9", "#fcae91", "#fb6a4a", "#de2d26", "#a50f15"],
-          analysis: "Carte basée sur les données de population des communes."
+          analysis: "Carte basée sur les données de population des communes.",
+          dataSources: ["ideo.ternum-bfc.fr - Données démographiques BFC", "data.gouv.fr - INSEE population légale"]
         }
       } else {
         mapData = {
@@ -222,7 +230,8 @@ serve(async (req) => {
           dataProperty: "population", 
           colorScheme: "gradient",
           colors: ["#3b82f6", "#60a5fa", "#93c5fd", "#bfdbfe", "#dbeafe"],
-          analysis: "Analyse en cours..."
+          analysis: "Analyse en cours...",
+          dataSources: ["ideo.ternum-bfc.fr - Données territoriales", "data.gouv.fr - Données publiques françaises"]
         }
       }
       logData.ai_response = mapData

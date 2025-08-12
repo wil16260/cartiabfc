@@ -409,10 +409,10 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: UMapDisp
           
           return {
             color: '#6b7280',
-            weight: 0.5,
+            weight: 1,
             fillColor: hasAIData ? '#fbbf24' : 'transparent',
             fillOpacity: hasAIData ? 0.3 : 0,
-            opacity: 0.6
+            opacity: 1
           };
         },
         onEachFeature: (feature, layer) => {
