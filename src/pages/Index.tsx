@@ -5,8 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Sparkles, Upload } from "lucide-react";
 import SearchBar from "@/components/SearchBar";
 import FileUpload from "@/components/FileUpload";
-import LeafletMap from "@/components/LeafletMap";
+import MapDisplay from "@/components/MapDisplay";
 import FilterPanel from "@/components/FilterPanel";
+import { supabase } from "@/lib/supabase";
+import { toast } from "sonner";
 
 const Index = () => {
   const [currentPrompt, setCurrentPrompt] = useState("");
@@ -71,42 +73,64 @@ const Index = () => {
     setCurrentPrompt(prompt);
     setIsGenerating(true);
     
-    // Get enabled map types to enhance the prompt
-    const enabledMapTypes = mapTypes.filter(type => type.enabled).map(type => type.id);
-    const enhancedPrompt = enabledMapTypes.length > 0 
-      ? `${prompt} [Types de cartes souhaités: ${enabledMapTypes.join(', ')}]`
-      : prompt;
-    
     try {
-      const response = await fetch('/api/generate-map-with-mistral', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ prompt: enhancedPrompt }),
+      // Enhanced prompt with selected map types
+      const mapTypesText = mapTypes
+        .filter(type => type.enabled)
+        .map(type => type.name)
+        .join(', ');
+      
+      const enhancedPrompt = mapTypesText 
+        ? `${prompt}. Types de cartes à considérer: ${mapTypesText}`
+        : prompt;
+
+      console.log('Sending enhanced prompt:', enhancedPrompt);
+      
+      const { data, error } = await supabase.functions.invoke('generate-map-with-mistral', {
+        body: { prompt: enhancedPrompt }
       });
 
-      if (!response.ok) {
+      if (error) {
+        console.error('Supabase function error:', error);
         throw new Error('Failed to generate map');
       }
 
-      const data = await response.json();
-      
-      if (data.success && data.mapData.layers) {
-        // Activate suggested layers
-        const suggestedLayers = data.mapData.layers;
-        setMapLayers(prev => 
-          prev.map(layer => ({
-            ...layer,
-            enabled: layer.id === 'base_departments' || suggestedLayers.includes(layer.id)
-          }))
-        );
+      if (!data?.success) {
+        console.error('Map generation failed:', data);
+        throw new Error(data?.error || 'Failed to generate map');
       }
+
+      console.log('AI response:', data);
+      
+      // Update map layers based on AI response
+      if (data.mapData?.dataLevel) {
+        const newLayers = mapLayers.map(layer => ({
+          ...layer,
+          enabled: shouldEnableLayer(layer.id, data.mapData.dataLevel)
+        }));
+        setMapLayers(newLayers);
+      }
+      
+      toast.success("Carte générée avec succès!");
+      
     } catch (error) {
       console.error('Error generating map:', error);
+      toast.error(`Erreur lors de la génération de la carte: ${error.message}`);
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const shouldEnableLayer = (layerId: string, dataLevel: string) => {
+    // Always show department boundaries as reference
+    if (layerId === 'base_departments') return true;
+    
+    // Enable population layer for data visualization
+    if (layerId === 'data_population' && ['communes', 'epci', 'departments'].includes(dataLevel)) {
+      return true;
+    }
+    
+    return false;
   };
 
   const handleFilesUploaded = (files: File[]) => {
@@ -189,7 +213,7 @@ const Index = () => {
 
           {/* Right Column - Map */}
           <div className="lg:col-span-4">
-            <LeafletMap 
+            <MapDisplay 
               prompt={currentPrompt} 
               isLoading={isGenerating}
               visibleLayers={visibleLayers}

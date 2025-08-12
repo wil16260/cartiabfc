@@ -131,7 +131,7 @@ const MapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: MapDispla
         }
       });
 
-      // Add outline for departments - visible based on layer toggle
+      // Add outline for departments - only line boundaries for template
       map.current.addLayer({
         id: deptLayerId,
         type: 'line',
@@ -142,7 +142,7 @@ const MapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: MapDispla
           'line-opacity': 0.8
         },
         layout: {
-          visibility: visibleLayers.includes('base_departments') ? 'visible' : 'visible' // Always visible for now
+          visibility: visibleLayers.includes('base_departments') ? 'visible' : 'none'
         }
       });
 
@@ -261,7 +261,7 @@ const MapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: MapDispla
     const layerMappings = {
       'base_departments': ['department-boundaries-outline'],
       'base_ign': ['ign-layer'],
-      'data_population': ['population-layer'],
+      'data_population': ['communes-styled', 'epci-styled'],
       'data_unemployment': ['unemployment-layer'],
       'data_density': ['density-layer']
     };
@@ -556,6 +556,9 @@ const MapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: MapDispla
         paint: {
           'fill-color': colorExpression,
           'fill-opacity': 0.7
+        },
+        layout: {
+          visibility: 'visible'
         }
       });
       
@@ -586,9 +589,10 @@ const MapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: MapDispla
             <div class="p-3">
               <h3 class="font-bold mb-2">${props?.libel_epci || 'EPCI'}</h3>
               <div class="space-y-1 text-sm">
-                <p>Population totale: ${props?.population_totale?.toLocaleString('fr-FR') || 'N/A'}</p>
-                <p>Nombre de communes: ${props?.nb_communes || 'N/A'}</p>
+                <p>Population totale: ${props?.population?.toLocaleString('fr-FR') || props?.population_totale?.toLocaleString('fr-FR') || 'N/A'}</p>
+                <p>Nombre de communes: ${props?.communes || props?.nb_communes || 'N/A'}</p>
                 ${props?.siren_epci ? `<p>SIREN: ${props.siren_epci}</p>` : ''}
+                ${props?.data_value ? `<p>Valeur: ${props.data_value}</p>` : ''}
               </div>
               <p class="text-xs text-muted-foreground mt-2">${mapData.description}</p>
             </div>
