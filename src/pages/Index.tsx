@@ -135,6 +135,10 @@ const Index = () => {
 
   const visibleLayers = mapLayers.filter(layer => layer.enabled).map(layer => layer.id);
 
+  // Debug logging
+  console.log('MapTypes state:', mapTypes);
+  console.log('MapLayers state:', mapLayers);
+
 
   return (
     <div className="min-h-screen bg-gradient-subtle">
