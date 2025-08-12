@@ -242,13 +242,14 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: UMapDisp
       }
     });
 
-    // Render region boundaries (always visible)
+    // Render region boundaries (always visible) with QGIS-like gradient styling
     if (geoData.region) {
       L.geoJSON(geoData.region, {
         style: {
-          color: '#3b82f6',
-          weight: 3,
-          fillOpacity: 0,
+          color: '#92c6df', // Light blue border (146,198,223)
+          weight: 2,
+          fillColor: '#92c6df', // Same light blue for fill
+          fillOpacity: 0.7, // 70% opacity as in QML
           opacity: 1
         }
       }).addTo(map);
