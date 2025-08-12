@@ -24,9 +24,26 @@ serve(async (req) => {
     // Get Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!
+    
+    console.log('Environment check:', { 
+      hasUrl: !!supabaseUrl, 
+      hasKey: !!supabaseKey,
+      urlPrefix: supabaseUrl?.substring(0, 20) 
+    })
+    
     const supabase = createClient(supabaseUrl, supabaseKey)
 
+    // Test database connection first
+    console.log('Testing database connection...')
+    const { data: testData, error: testError } = await supabase
+      .from('ai_config')
+      .select('count(*)')
+      .limit(1)
+    
+    console.log('Connection test result:', { testData, testError })
+
     // Get active AI configuration
+    console.log('Fetching active AI configuration...')
     const { data: aiConfig, error: configError } = await supabase
       .from('ai_config')
       .select('*')
@@ -34,7 +51,11 @@ serve(async (req) => {
       .order('created_at', { ascending: false })
       .limit(1)
 
-    console.log('AI Config query result:', { aiConfig, configError })
+    console.log('AI Config query result:', { 
+      configCount: aiConfig?.length, 
+      configError: configError?.message,
+      firstConfigId: aiConfig?.[0]?.id 
+    })
 
     if (configError) {
       console.error('AI config database error:', configError)
@@ -47,6 +68,11 @@ serve(async (req) => {
     }
 
     const activeConfig = aiConfig[0]
+    console.log('Using config:', { 
+      id: activeConfig.id, 
+      modelName: activeConfig.model_name,
+      hasSystemPrompt: !!activeConfig.system_prompt 
+    })
 
     // Generate map description with Mistral
     const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
