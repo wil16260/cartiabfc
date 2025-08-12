@@ -41,6 +41,7 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: UMapDisp
   const [geoData, setGeoData] = useState<any>(null);
   const [aiGeneratedData, setAiGeneratedData] = useState<any>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [showDataVisualization, setShowDataVisualization] = useState(true);
 
   useEffect(() => {
     loadMapData();
@@ -56,7 +57,7 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: UMapDisp
     if (map && geoData) {
       renderLayers();
     }
-  }, [map, geoData, visibleLayers, aiGeneratedData]);
+  }, [map, geoData, visibleLayers, aiGeneratedData, showDataVisualization]);
 
   useEffect(() => {
     if (prompt && map) {
@@ -83,12 +84,13 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: UMapDisp
       const epciLines = epciText.trim().split('\n');
       const epciFeatures = epciLines.map(line => JSON.parse(line));
 
-      // Load commune boundaries (if available)
+      // Load commune boundaries
       let communeFeatures = [];
       try {
         const communeResponse = await fetch('/data/com_bfc3.json');
         const communeData = await communeResponse.json();
         communeFeatures = communeData.features || [];
+        console.log('Loaded communes:', communeFeatures.length);
       } catch (error) {
         console.log('Commune data not available:', error);
       }
@@ -261,13 +263,13 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: UMapDisp
           const hasAIData = aiGeneratedData && aiGeneratedData.enhancedFeatures && 
                            aiGeneratedData.enhancedFeatures.some((f: any) => 
                              f.properties?.code_departement === deptCode
-                           );
+                           ) && showDataVisualization;
           
           return {
-            color: hasAIData ? '#e11d48' : '#f59e0b',
-            weight: hasAIData ? 3 : 2,
-            fillColor: hasAIData ? '#fda4af' : '#fbbf24',
-            fillOpacity: hasAIData ? 0.6 : 0.3,
+            color: '#f59e0b',
+            weight: 2,
+            fillColor: hasAIData ? '#fbbf24' : 'transparent',
+            fillOpacity: hasAIData ? 0.5 : 0,
             opacity: 0.8
           };
         },
@@ -284,7 +286,7 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: UMapDisp
           }
           
           let tooltipContent = `<strong>${deptName || 'Département'}</strong><br/>Code: ${deptCode || 'N/A'}`;
-          if (aiData) {
+          if (aiData && showDataVisualization) {
             Object.keys(aiData.properties).forEach(key => {
               if (key !== 'code_departement' && key !== 'libel_departement') {
                 tooltipContent += `<br/>${key}: ${aiData.properties[key]}`;
@@ -301,18 +303,17 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: UMapDisp
           layer.on('mouseover', () => {
             if (layer instanceof L.Path) {
               layer.setStyle({
-                fillOpacity: 0.8,
-                weight: 4
+                fillOpacity: showDataVisualization && aiData ? 0.7 : 0,
+                weight: 3
               });
             }
           });
           
           layer.on('mouseout', () => {
             if (layer instanceof L.Path) {
-              const hasAIData = aiData !== null;
               layer.setStyle({
-                fillOpacity: hasAIData ? 0.6 : 0.3,
-                weight: hasAIData ? 3 : 2
+                fillOpacity: showDataVisualization && aiData ? 0.5 : 0,
+                weight: 2
               });
             }
           });
@@ -328,13 +329,13 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: UMapDisp
           const hasAIData = aiGeneratedData && aiGeneratedData.enhancedFeatures && 
                            aiGeneratedData.enhancedFeatures.some((f: any) => 
                              f.properties?.code_epci === epciCode
-                           );
+                           ) && showDataVisualization;
           
           return {
-            color: hasAIData ? '#10b981' : '#8b5cf6',
-            weight: hasAIData ? 3 : 2,
-            fillColor: hasAIData ? '#86efac' : '#c4b5fd',
-            fillOpacity: hasAIData ? 0.6 : 0.3,
+            color: '#8b5cf6',
+            weight: 1,
+            fillColor: hasAIData ? '#c4b5fd' : 'transparent',
+            fillOpacity: hasAIData ? 0.4 : 0,
             opacity: 0.8
           };
         },
@@ -350,7 +351,7 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: UMapDisp
           }
           
           let tooltipContent = `<strong>${epciName || 'EPCI'}</strong><br/>Code: ${epciCode || 'N/A'}`;
-          if (aiData) {
+          if (aiData && showDataVisualization) {
             Object.keys(aiData.properties).forEach(key => {
               if (key !== 'code_epci' && key !== 'name') {
                 tooltipContent += `<br/>${key}: ${aiData.properties[key]}`;
@@ -367,21 +368,22 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: UMapDisp
     }
 
     // Render commune boundaries
-    if (geoData.communes && visibleLayers.includes('base_communes')) {
+    if (geoData.communes && geoData.communes.features && visibleLayers.includes('base_communes')) {
+      console.log('Rendering communes:', geoData.communes.features.length);
       L.geoJSON(geoData.communes, {
         style: (feature) => {
           const communeCode = feature?.properties?.code_commune || feature?.properties?.insee_com;
           const hasAIData = aiGeneratedData && aiGeneratedData.enhancedFeatures && 
                            aiGeneratedData.enhancedFeatures.some((f: any) => 
                              f.properties?.code_commune === communeCode
-                           );
+                           ) && showDataVisualization;
           
           return {
-            color: hasAIData ? '#f59e0b' : '#6b7280',
-            weight: hasAIData ? 2 : 1,
-            fillColor: hasAIData ? '#fbbf24' : '#d1d5db',
-            fillOpacity: hasAIData ? 0.5 : 0.2,
-            opacity: 0.7
+            color: '#6b7280',
+            weight: 0.5,
+            fillColor: hasAIData ? '#fbbf24' : 'transparent',
+            fillOpacity: hasAIData ? 0.3 : 0,
+            opacity: 0.6
           };
         },
         onEachFeature: (feature, layer) => {
@@ -396,7 +398,7 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: UMapDisp
           }
           
           let tooltipContent = `<strong>${communeName || 'Commune'}</strong><br/>Code: ${communeCode || 'N/A'}`;
-          if (aiData) {
+          if (aiData && showDataVisualization) {
             Object.keys(aiData.properties).forEach(key => {
               if (key !== 'code_commune' && key !== 'nom_commune') {
                 tooltipContent += `<br/>${key}: ${aiData.properties[key]}`;
@@ -592,6 +594,16 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: UMapDisp
           )}
         </div>
         <div className="flex gap-2">
+          {aiGeneratedData && (
+            <Button 
+              variant={showDataVisualization ? "default" : "outline"} 
+              size="sm" 
+              onClick={() => setShowDataVisualization(!showDataVisualization)}
+            >
+              <Palette className="h-4 w-4 mr-1" />
+              {showDataVisualization ? "Masquer données" : "Afficher données"}
+            </Button>
+          )}
           <Button 
             variant={isEditing ? "default" : "outline"} 
             size="sm" 
