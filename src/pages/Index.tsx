@@ -46,9 +46,36 @@ const Index = () => {
     }
   ]);
 
+  const [mapTypes, setMapTypes] = useState([
+    {
+      id: 'geocodage',
+      name: 'Géocodage',
+      enabled: false,
+      description: 'Ajouter des points sur la carte avec des éléments géolocalisés'
+    },
+    {
+      id: 'chloroplethe',
+      name: 'Choroplèthe',
+      enabled: false,
+      description: 'Joindre des données aux communes, EPCI ou départements'
+    },
+    {
+      id: 'complexe',
+      name: 'Carte complexe',
+      enabled: false,
+      description: 'Créer des cartes avancées avec plusieurs formes et couches'
+    }
+  ]);
+
   const handleSearch = async (prompt: string) => {
     setCurrentPrompt(prompt);
     setIsGenerating(true);
+    
+    // Get enabled map types to enhance the prompt
+    const enabledMapTypes = mapTypes.filter(type => type.enabled).map(type => type.id);
+    const enhancedPrompt = enabledMapTypes.length > 0 
+      ? `${prompt} [Types de cartes souhaités: ${enabledMapTypes.join(', ')}]`
+      : prompt;
     
     try {
       const response = await fetch('/api/generate-map-with-mistral', {
@@ -56,7 +83,7 @@ const Index = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ prompt: enhancedPrompt }),
       });
 
       if (!response.ok) {
@@ -92,6 +119,16 @@ const Index = () => {
         layer.id === layerId 
           ? { ...layer, enabled }
           : layer
+      )
+    );
+  };
+
+  const handleMapTypeToggle = (mapTypeId: string, enabled: boolean) => {
+    setMapTypes(prev => 
+      prev.map(mapType => 
+        mapType.id === mapTypeId 
+          ? { ...mapType, enabled }
+          : mapType
       )
     );
   };
@@ -139,8 +176,10 @@ const Index = () => {
           {/* Left Column - Layers */}
           <div className="lg:col-span-1">
             <FilterPanel 
-              layers={mapLayers} 
-              onLayerToggle={handleLayerToggle} 
+              layers={mapLayers}
+              mapTypes={mapTypes}
+              onLayerToggle={handleLayerToggle}
+              onMapTypeToggle={handleMapTypeToggle}
             />
           </div>
 
