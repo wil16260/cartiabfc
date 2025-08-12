@@ -95,6 +95,51 @@ export type Database = {
         }
         Relationships: []
       }
+      epci: {
+        Row: {
+          area_km2: number | null
+          code: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          geojson_data: Json | null
+          geojson_url: string | null
+          id: string
+          is_active: boolean
+          name: string
+          population: number | null
+          updated_at: string
+        }
+        Insert: {
+          area_km2?: number | null
+          code: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          geojson_data?: Json | null
+          geojson_url?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          population?: number | null
+          updated_at?: string
+        }
+        Update: {
+          area_km2?: number | null
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          geojson_data?: Json | null
+          geojson_url?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          population?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       geojson_templates: {
         Row: {
           created_at: string
