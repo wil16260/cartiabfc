@@ -31,11 +31,14 @@ serve(async (req) => {
       .from('ai_config')
       .select('*')
       .eq('is_active', true)
-      .single()
+      .order('created_at', { ascending: false })
+      .limit(1)
 
-    if (configError) {
+    if (configError || !aiConfig || aiConfig.length === 0) {
       throw new Error('No active AI configuration found')
     }
+
+    const activeConfig = aiConfig[0]
 
     // Generate map description with Mistral
     const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
@@ -45,11 +48,11 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: aiConfig.model_name || 'mistral-large-latest',
+        model: activeConfig.model_name || 'mistral-large-latest',
         messages: [
           {
             role: 'system',
-            content: aiConfig.system_prompt || 'Vous êtes un assistant IA géospatial expert qui aide les utilisateurs à créer de belles cartes précises de la région Bourgogne-Franche-Comté en utilisant les données communales disponibles.'
+            content: activeConfig.system_prompt || 'Vous êtes un assistant IA géospatial expert qui aide les utilisateurs à créer de belles cartes précises de la région Bourgogne-Franche-Comté en utilisant les données communales disponibles.'
           },
           {
             role: 'user',
