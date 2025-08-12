@@ -77,6 +77,22 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: UMapDisp
       const deptLines = deptText.trim().split('\n');
       const deptFeatures = deptLines.map(line => JSON.parse(line));
 
+      // Load EPCI boundaries
+      const epciResponse = await fetch('/data/epci.geojsonl.json');
+      const epciText = await epciResponse.text();
+      const epciLines = epciText.trim().split('\n');
+      const epciFeatures = epciLines.map(line => JSON.parse(line));
+
+      // Load commune boundaries (if available)
+      let communeFeatures = [];
+      try {
+        const communeResponse = await fetch('/data/com_bfc3.json');
+        const communeData = await communeResponse.json();
+        communeFeatures = communeData.features || [];
+      } catch (error) {
+        console.log('Commune data not available:', error);
+      }
+
       setGeoData({
         region: {
           type: 'FeatureCollection',
@@ -85,6 +101,14 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: UMapDisp
         departments: {
           type: 'FeatureCollection',
           features: deptFeatures
+        },
+        epci: {
+          type: 'FeatureCollection',
+          features: epciFeatures
+        },
+        communes: {
+          type: 'FeatureCollection',
+          features: communeFeatures
         }
       });
 
@@ -231,38 +255,64 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: UMapDisp
     // Render department boundaries
     if (geoData.departments && visibleLayers.includes('base_departments')) {
       L.geoJSON(geoData.departments, {
-        style: {
-          color: '#f59e0b',
-          weight: 2,
-          fillColor: '#fbbf24',
-          fillOpacity: 0.3,
-          opacity: 0.8
+        style: (feature) => {
+          // Check if we have AI data for this department
+          const deptCode = feature?.properties?.code_departement;
+          const hasAIData = aiGeneratedData && aiGeneratedData.enhancedFeatures && 
+                           aiGeneratedData.enhancedFeatures.some((f: any) => 
+                             f.properties?.code_departement === deptCode
+                           );
+          
+          return {
+            color: hasAIData ? '#e11d48' : '#f59e0b',
+            weight: hasAIData ? 3 : 2,
+            fillColor: hasAIData ? '#fda4af' : '#fbbf24',
+            fillOpacity: hasAIData ? 0.6 : 0.3,
+            opacity: 0.8
+          };
         },
         onEachFeature: (feature, layer) => {
-          layer.bindTooltip(
-            `<strong>${feature.properties?.libel_departement || 'Département'}</strong><br/>
-             Code: ${feature.properties?.code_departement || 'N/A'}`,
-            { 
-              permanent: false, 
-              direction: 'top',
-              className: 'custom-tooltip'
-            }
-          );
+          const deptCode = feature.properties?.code_departement;
+          const deptName = feature.properties?.libel_departement;
+          
+          // Find AI data for this department
+          let aiData = null;
+          if (aiGeneratedData && aiGeneratedData.enhancedFeatures) {
+            aiData = aiGeneratedData.enhancedFeatures.find((f: any) => 
+              f.properties?.code_departement === deptCode
+            );
+          }
+          
+          let tooltipContent = `<strong>${deptName || 'Département'}</strong><br/>Code: ${deptCode || 'N/A'}`;
+          if (aiData) {
+            Object.keys(aiData.properties).forEach(key => {
+              if (key !== 'code_departement' && key !== 'libel_departement') {
+                tooltipContent += `<br/>${key}: ${aiData.properties[key]}`;
+              }
+            });
+          }
+          
+          layer.bindTooltip(tooltipContent, { 
+            permanent: false, 
+            direction: 'top',
+            className: 'custom-tooltip'
+          });
           
           layer.on('mouseover', () => {
             if (layer instanceof L.Path) {
               layer.setStyle({
-                fillOpacity: 0.6,
-                weight: 3
+                fillOpacity: 0.8,
+                weight: 4
               });
             }
           });
           
           layer.on('mouseout', () => {
             if (layer instanceof L.Path) {
+              const hasAIData = aiData !== null;
               layer.setStyle({
-                fillOpacity: 0.3,
-                weight: 2
+                fillOpacity: hasAIData ? 0.6 : 0.3,
+                weight: hasAIData ? 3 : 2
               });
             }
           });
@@ -270,13 +320,104 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: UMapDisp
       }).addTo(map);
     }
 
-    // Render AI-generated GeoJSON data
-    if (aiGeneratedData) {
-      console.log('Rendering AI-generated data:', aiGeneratedData);
+    // Render EPCI boundaries
+    if (geoData.epci && visibleLayers.includes('base_epci')) {
+      L.geoJSON(geoData.epci, {
+        style: (feature) => {
+          const epciCode = feature?.properties?.code;
+          const hasAIData = aiGeneratedData && aiGeneratedData.enhancedFeatures && 
+                           aiGeneratedData.enhancedFeatures.some((f: any) => 
+                             f.properties?.code_epci === epciCode
+                           );
+          
+          return {
+            color: hasAIData ? '#10b981' : '#8b5cf6',
+            weight: hasAIData ? 3 : 2,
+            fillColor: hasAIData ? '#86efac' : '#c4b5fd',
+            fillOpacity: hasAIData ? 0.6 : 0.3,
+            opacity: 0.8
+          };
+        },
+        onEachFeature: (feature, layer) => {
+          const epciCode = feature.properties?.code;
+          const epciName = feature.properties?.name;
+          
+          let aiData = null;
+          if (aiGeneratedData && aiGeneratedData.enhancedFeatures) {
+            aiData = aiGeneratedData.enhancedFeatures.find((f: any) => 
+              f.properties?.code_epci === epciCode
+            );
+          }
+          
+          let tooltipContent = `<strong>${epciName || 'EPCI'}</strong><br/>Code: ${epciCode || 'N/A'}`;
+          if (aiData) {
+            Object.keys(aiData.properties).forEach(key => {
+              if (key !== 'code_epci' && key !== 'name') {
+                tooltipContent += `<br/>${key}: ${aiData.properties[key]}`;
+              }
+            });
+          }
+          
+          layer.bindTooltip(tooltipContent, { 
+            permanent: false, 
+            direction: 'top'
+          });
+        }
+      }).addTo(map);
+    }
+
+    // Render commune boundaries
+    if (geoData.communes && visibleLayers.includes('base_communes')) {
+      L.geoJSON(geoData.communes, {
+        style: (feature) => {
+          const communeCode = feature?.properties?.code_commune || feature?.properties?.insee_com;
+          const hasAIData = aiGeneratedData && aiGeneratedData.enhancedFeatures && 
+                           aiGeneratedData.enhancedFeatures.some((f: any) => 
+                             f.properties?.code_commune === communeCode
+                           );
+          
+          return {
+            color: hasAIData ? '#f59e0b' : '#6b7280',
+            weight: hasAIData ? 2 : 1,
+            fillColor: hasAIData ? '#fbbf24' : '#d1d5db',
+            fillOpacity: hasAIData ? 0.5 : 0.2,
+            opacity: 0.7
+          };
+        },
+        onEachFeature: (feature, layer) => {
+          const communeCode = feature.properties?.code_commune || feature.properties?.insee_com;
+          const communeName = feature.properties?.nom_commune || feature.properties?.nom_com;
+          
+          let aiData = null;
+          if (aiGeneratedData && aiGeneratedData.enhancedFeatures) {
+            aiData = aiGeneratedData.enhancedFeatures.find((f: any) => 
+              f.properties?.code_commune === communeCode
+            );
+          }
+          
+          let tooltipContent = `<strong>${communeName || 'Commune'}</strong><br/>Code: ${communeCode || 'N/A'}`;
+          if (aiData) {
+            Object.keys(aiData.properties).forEach(key => {
+              if (key !== 'code_commune' && key !== 'nom_commune') {
+                tooltipContent += `<br/>${key}: ${aiData.properties[key]}`;
+              }
+            });
+          }
+          
+          layer.bindTooltip(tooltipContent, { 
+            permanent: false, 
+            direction: 'top'
+          });
+        }
+      }).addTo(map);
+    }
+
+    // Render AI-generated point data (geocoding)
+    if (aiGeneratedData && aiGeneratedData.features) {
+      console.log('Rendering AI-generated point data:', aiGeneratedData.features);
       
       L.geoJSON(aiGeneratedData, {
         pointToLayer: (feature, latlng) => {
-          // Custom icons for points
           const icon = L.divIcon({
             html: `<div style="background-color: #e11d48; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
             className: 'custom-marker',
@@ -286,25 +427,13 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: UMapDisp
           
           return L.marker(latlng, { icon });
         },
-        style: (feature) => {
-          // Style for polygons and lines
-          return {
-            color: '#e11d48',
-            weight: 3,
-            fillColor: '#fda4af',
-            fillOpacity: 0.6,
-            opacity: 0.9
-          };
-        },
         onEachFeature: (feature, layer) => {
-          // Add popups with feature properties
           const properties = feature.properties || {};
           const name = properties.name || properties.nom || properties.title || 'Point généré par IA';
           
           let popupContent = `<div class="p-2">
             <h3 class="font-semibold text-sm">${name}</h3>`;
           
-          // Add other properties
           Object.keys(properties).forEach(key => {
             if (key !== 'name' && key !== 'nom' && key !== 'title' && key !== 'icon') {
               popupContent += `<p class="text-xs text-gray-600">${key}: ${properties[key]}</p>`;
@@ -312,33 +441,11 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: UMapDisp
           });
           
           popupContent += '</div>';
-          
           layer.bindPopup(popupContent);
-          
-          // Add hover effects for non-point features
-          if (feature.geometry.type !== 'Point') {
-            layer.on('mouseover', () => {
-              if (layer instanceof L.Path) {
-                layer.setStyle({
-                  fillOpacity: 0.8,
-                  weight: 4
-                });
-              }
-            });
-            
-            layer.on('mouseout', () => {
-              if (layer instanceof L.Path) {
-                layer.setStyle({
-                  fillOpacity: 0.6,
-                  weight: 3
-                });
-              }
-            });
-          }
         }
       }).addTo(map);
       
-      toast.success("Données générées par IA ajoutées à la carte!");
+      toast.success("Données IA ajoutées à la carte!");
     }
   };
 
@@ -358,20 +465,35 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: UMapDisp
         setTempTitle(mapData.title);
       }
       
-      // Parse the GeoJSON data from the AI response description
+      // Process AI response to enhance existing geographic data
       if (mapData.description) {
         try {
           // Extract JSON from markdown code block
           const jsonMatch = mapData.description.match(/```json\s*([\s\S]*?)\s*```/);
           if (jsonMatch) {
-            const geoJsonData = JSON.parse(jsonMatch[1]);
-            console.log('Parsed GeoJSON data:', geoJsonData);
-            setAiGeneratedData(geoJsonData);
+            const aiResponse = JSON.parse(jsonMatch[1]);
+            console.log('Parsed AI response:', aiResponse);
             
-            // Zoom to bounds of generated data if it has features
-            if (geoJsonData.features && geoJsonData.features.length > 0 && map) {
-              const group = L.geoJSON(geoJsonData);
-              map.fitBounds(group.getBounds(), { padding: [20, 20] });
+            // Check if it's point data (geocoding) or data enhancement
+            if (aiResponse.features && aiResponse.features.length > 0) {
+              const firstFeature = aiResponse.features[0];
+              
+              if (firstFeature.geometry.type === 'Point') {
+                // Point data - display as markers
+                setAiGeneratedData(aiResponse);
+              } else {
+                // Polygon data - use as data enhancement for existing boundaries
+                setAiGeneratedData({
+                  enhancedFeatures: aiResponse.features,
+                  metadata: aiResponse.metadata
+                });
+              }
+              
+              // Zoom to bounds if point data
+              if (firstFeature.geometry.type === 'Point' && map) {
+                const group = L.geoJSON(aiResponse);
+                map.fitBounds(group.getBounds(), { padding: [20, 20] });
+              }
             }
           }
         } catch (parseError) {

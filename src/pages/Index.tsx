@@ -23,6 +23,18 @@ const Index = () => {
       description: 'Contours des départements' 
     },
     { 
+      id: 'base_epci', 
+      name: 'EPCI', 
+      enabled: false, 
+      description: 'Établissements publics de coopération intercommunale' 
+    },
+    { 
+      id: 'base_communes', 
+      name: 'Communes', 
+      enabled: false, 
+      description: 'Contours des communes' 
+    },
+    { 
       id: 'base_ign', 
       name: 'Plan IGN', 
       enabled: false, 
@@ -32,7 +44,7 @@ const Index = () => {
       id: 'data_population', 
       name: 'Population', 
       enabled: false, 
-      description: 'Données de population par département' 
+      description: 'Données de population par territoire' 
     },
     { 
       id: 'data_unemployment', 
@@ -124,6 +136,11 @@ const Index = () => {
   const shouldEnableLayer = (layerId: string, dataLevel: string) => {
     // Always show department boundaries as reference
     if (layerId === 'base_departments') return true;
+    
+    // Enable appropriate geographic layers based on data level
+    if (layerId === 'base_communes' && dataLevel === 'communes') return true;
+    if (layerId === 'base_epci' && dataLevel === 'epci') return true;
+    if (layerId === 'base_departments' && dataLevel === 'departments') return true;
     
     // Enable population layer for data visualization
     if (layerId === 'data_population' && ['communes', 'epci', 'departments'].includes(dataLevel)) {
