@@ -37,7 +37,7 @@ serve(async (req) => {
     console.log('Testing database connection...')
     const { data: testData, error: testError } = await supabase
       .from('ai_config')
-      .select('count(*)')
+      .select('id')
       .limit(1)
     
     console.log('Connection test result:', { testData, testError })
