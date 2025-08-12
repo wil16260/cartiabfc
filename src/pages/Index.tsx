@@ -2,10 +2,14 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Sparkles, Upload } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Sparkles, Upload, Map } from "lucide-react";
 import SearchBar from "@/components/SearchBar";
 import FileUpload from "@/components/FileUpload";
 import MapDisplay from "@/components/MapDisplay";
+import LeafletMap from "@/components/LeafletMap";
+import D3MapDisplay from "@/components/D3MapDisplay";
+import UMapDisplay from "@/components/UMapDisplay";
 import FilterPanel from "@/components/FilterPanel";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -15,6 +19,7 @@ const Index = () => {
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showFileUpload, setShowFileUpload] = useState(false);
+  const [selectedMapEngine, setSelectedMapEngine] = useState<'mapbox' | 'leaflet' | 'd3' | 'umap'>('leaflet');
   const [mapLayers, setMapLayers] = useState([
     { 
       id: 'base_departments', 
@@ -176,6 +181,23 @@ const Index = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Map className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Moteur cartographique:</span>
+              </div>
+              <Select value={selectedMapEngine} onValueChange={(value: any) => setSelectedMapEngine(value)}>
+                <SelectTrigger className="w-48">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="leaflet">Leaflet (Gratuit)</SelectItem>
+                  <SelectItem value="d3">D3.js (Gratuit)</SelectItem>
+                  <SelectItem value="umap">uMap Style (Gratuit)</SelectItem>
+                  <SelectItem value="mapbox">Mapbox (Token requis)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <SearchBar onSearch={handleSearch} isLoading={isGenerating} />
             <div className="flex items-center gap-3">
               <Button 
@@ -213,11 +235,34 @@ const Index = () => {
 
           {/* Right Column - Map */}
           <div className="lg:col-span-4">
-            <MapDisplay 
-              prompt={currentPrompt} 
-              isLoading={isGenerating}
-              visibleLayers={visibleLayers}
-            />
+            {selectedMapEngine === 'mapbox' && (
+              <MapDisplay 
+                prompt={currentPrompt} 
+                isLoading={isGenerating}
+                visibleLayers={visibleLayers}
+              />
+            )}
+            {selectedMapEngine === 'leaflet' && (
+              <LeafletMap 
+                prompt={currentPrompt} 
+                isLoading={isGenerating}
+                visibleLayers={visibleLayers}
+              />
+            )}
+            {selectedMapEngine === 'd3' && (
+              <D3MapDisplay 
+                prompt={currentPrompt} 
+                isLoading={isGenerating}
+                visibleLayers={visibleLayers}
+              />
+            )}
+            {selectedMapEngine === 'umap' && (
+              <UMapDisplay 
+                prompt={currentPrompt} 
+                isLoading={isGenerating}
+                visibleLayers={visibleLayers}
+              />
+            )}
           </div>
         </div>
       </main>
