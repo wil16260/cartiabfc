@@ -29,30 +29,33 @@ serve(async (req) => {
     const { prompt } = await req.json()
     logData.user_prompt = prompt
 
-    // Get Supabase client
+    // Get Supabase client with service role key for admin operations
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     
     console.log('Environment check:', { 
       hasUrl: !!supabaseUrl, 
-      hasKey: !!supabaseKey,
+      hasServiceKey: !!supabaseServiceKey,
       urlPrefix: supabaseUrl?.substring(0, 20) 
     })
     
-    const supabase = createClient(supabaseUrl, supabaseKey)
+    // Use service role client for accessing admin-only ai_config table
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
 
-    // Get user info from authorization header if available
+    // Get user info from authorization header if available (for logging)
     const authHeader = req.headers.get('authorization')
     if (authHeader) {
-      const { data: { user } } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''))
+      // Use anon key client for user operations
+      const supabaseAnon = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!)
+      const { data: { user } } = await supabaseAnon.auth.getUser(authHeader.replace('Bearer ', ''))
       if (user) {
         logData.created_by = user.id
       }
     }
 
-    // Get active AI configuration
+    // Get active AI configuration using admin client
     console.log('Fetching active AI configuration...')
-    const { data: aiConfig, error: configError } = await supabase
+    const { data: aiConfig, error: configError } = await supabaseAdmin
       .from('ai_config')
       .select('*')
       .eq('is_active', true)
@@ -229,8 +232,8 @@ serve(async (req) => {
     logData.success = true
     logData.execution_time_ms = Date.now() - startTime
 
-    // Log the generation to database
-    await supabase.from('ai_generation_logs').insert(logData)
+    // Log the generation to database using admin client
+    await supabaseAdmin.from('ai_generation_logs').insert(logData)
 
     return new Response(
       JSON.stringify({ 
@@ -249,12 +252,12 @@ serve(async (req) => {
     logData.error_message = error.message
     logData.execution_time_ms = Date.now() - startTime
 
-    // Attempt to log the error to database
+    // Attempt to log the error to database using admin client
     try {
       const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-      const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!
-      const supabase = createClient(supabaseUrl, supabaseKey)
-      await supabase.from('ai_generation_logs').insert(logData)
+      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+      const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
+      await supabaseAdmin.from('ai_generation_logs').insert(logData)
     } catch (logError) {
       console.error('Failed to log error to database:', logError)
     }
