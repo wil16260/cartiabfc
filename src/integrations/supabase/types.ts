@@ -47,6 +47,48 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_generation_logs: {
+        Row: {
+          ai_response: Json | null
+          created_at: string
+          created_by: string | null
+          error_message: string | null
+          execution_time_ms: number | null
+          id: string
+          model_name: string | null
+          raw_ai_response: string | null
+          success: boolean
+          system_prompt: string | null
+          user_prompt: string
+        }
+        Insert: {
+          ai_response?: Json | null
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          execution_time_ms?: number | null
+          id?: string
+          model_name?: string | null
+          raw_ai_response?: string | null
+          success?: boolean
+          system_prompt?: string | null
+          user_prompt: string
+        }
+        Update: {
+          ai_response?: Json | null
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          execution_time_ms?: number | null
+          id?: string
+          model_name?: string | null
+          raw_ai_response?: string | null
+          success?: boolean
+          system_prompt?: string | null
+          user_prompt?: string
+        }
+        Relationships: []
+      }
       documents: {
         Row: {
           created_at: string

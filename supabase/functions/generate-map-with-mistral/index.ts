@@ -12,8 +12,22 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders })
   }
 
+  const startTime = Date.now()
+  let logData = {
+    user_prompt: '',
+    ai_response: null,
+    raw_ai_response: '',
+    success: false,
+    error_message: null,
+    model_name: null,
+    system_prompt: null,
+    execution_time_ms: null,
+    created_by: null
+  }
+
   try {
     const { prompt } = await req.json()
+    logData.user_prompt = prompt
 
     // Get Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
@@ -26,6 +40,15 @@ serve(async (req) => {
     })
     
     const supabase = createClient(supabaseUrl, supabaseKey)
+
+    // Get user info from authorization header if available
+    const authHeader = req.headers.get('authorization')
+    if (authHeader) {
+      const { data: { user } } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''))
+      if (user) {
+        logData.created_by = user.id
+      }
+    }
 
     // Get active AI configuration
     console.log('Fetching active AI configuration...')
@@ -53,6 +76,9 @@ serve(async (req) => {
     }
 
     const activeConfig = aiConfig[0]
+    logData.model_name = activeConfig.model_name
+    logData.system_prompt = activeConfig.system_prompt
+    
     console.log('Using config:', { 
       id: activeConfig.id, 
       modelName: activeConfig.model_name,
@@ -142,11 +168,13 @@ serve(async (req) => {
 
     const data = await response.json()
     const generatedContent = data.choices[0].message.content
+    logData.raw_ai_response = generatedContent
 
     // Try to parse JSON response, fallback to default
     let mapData
     try {
       mapData = JSON.parse(generatedContent)
+      logData.ai_response = mapData
     } catch {
       // Default fallback based on prompt analysis
       const isPopulationRelated = prompt.toLowerCase().includes('population') || prompt.toLowerCase().includes('démographie') || prompt.toLowerCase().includes('habitant')
@@ -194,7 +222,15 @@ serve(async (req) => {
           analysis: "Analyse en cours..."
         }
       }
+      logData.ai_response = mapData
     }
+
+    // Mark as successful
+    logData.success = true
+    logData.execution_time_ms = Date.now() - startTime
+
+    // Log the generation to database
+    await supabase.from('ai_generation_logs').insert(logData)
 
     return new Response(
       JSON.stringify({ 
@@ -207,6 +243,22 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error:', error)
+    
+    // Log the error
+    logData.success = false
+    logData.error_message = error.message
+    logData.execution_time_ms = Date.now() - startTime
+
+    // Attempt to log the error to database
+    try {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+      const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!
+      const supabase = createClient(supabaseUrl, supabaseKey)
+      await supabase.from('ai_generation_logs').insert(logData)
+    } catch (logError) {
+      console.error('Failed to log error to database:', logError)
+    }
+
     return new Response(
       JSON.stringify({ 
         success: false,
