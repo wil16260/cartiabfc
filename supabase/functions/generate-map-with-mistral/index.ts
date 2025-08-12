@@ -15,12 +15,6 @@ serve(async (req) => {
   try {
     const { prompt } = await req.json()
 
-    // Get Mistral API key from secrets
-    const mistralApiKey = Deno.env.get('MISTRAL_API_KEY')
-    if (!mistralApiKey) {
-      throw new Error('MISTRAL_API_KEY not configured')
-    }
-
     // Get Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!
@@ -32,15 +26,6 @@ serve(async (req) => {
     })
     
     const supabase = createClient(supabaseUrl, supabaseKey)
-
-    // Test database connection first
-    console.log('Testing database connection...')
-    const { data: testData, error: testError } = await supabase
-      .from('ai_config')
-      .select('id')
-      .limit(1)
-    
-    console.log('Connection test result:', { testData, testError })
 
     // Get active AI configuration
     console.log('Fetching active AI configuration...')
@@ -73,6 +58,12 @@ serve(async (req) => {
       modelName: activeConfig.model_name,
       hasSystemPrompt: !!activeConfig.system_prompt 
     })
+
+    // Get Mistral API key from secrets using the config
+    const mistralApiKey = Deno.env.get(activeConfig.api_key_name || 'MISTRAL_API_KEY')
+    if (!mistralApiKey) {
+      throw new Error(`${activeConfig.api_key_name || 'MISTRAL_API_KEY'} not configured`)
+    }
 
     // Generate map description with Mistral
     const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
