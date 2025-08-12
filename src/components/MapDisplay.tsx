@@ -446,38 +446,45 @@ const MapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: MapDispla
     if (!map.current) return;
 
     try {
-      // Load commune data and aggregate by EPCI
-      const response = await fetch('/data/com_bfc3.json');
-      const communeData = await response.json();
+      // Load proper EPCI boundary data
+      const response = await fetch('/data/epci.geojsonl.json');
+      const text = await response.text();
+      const lines = text.trim().split('\n');
+      const epciFeatures = lines.map(line => JSON.parse(line));
+
+      // Load commune data to aggregate statistics by EPCI
+      const communeResponse = await fetch('/data/com_bfc3.json');
+      const communeData = await communeResponse.json();
       
-      // Group communes by EPCI
-      const epciGroups: { [key: string]: any[] } = {};
+      // Group communes by EPCI SIREN to aggregate data
+      const epciStats: { [key: string]: any } = {};
       communeData.forEach((commune: any) => {
-        const epciKey = commune.properties?.libel_epci || 'Inconnu';
-        if (!epciGroups[epciKey]) {
-          epciGroups[epciKey] = [];
+        const sirenEpci = commune.properties?.siren_epci;
+        if (sirenEpci) {
+          if (!epciStats[sirenEpci]) {
+            epciStats[sirenEpci] = {
+              population_totale: 0,
+              nb_communes: 0,
+              libel_epci: commune.properties?.libel_epci || 'Inconnu'
+            };
+          }
+          epciStats[sirenEpci].population_totale += parseInt(commune.properties?.population || '0') || 0;
+          epciStats[sirenEpci].nb_communes += 1;
         }
-        epciGroups[epciKey].push(commune);
       });
 
-      // Create aggregated EPCI features (simplified - using first commune's geometry)
-      // In a real implementation, you'd want proper EPCI boundary data
-      const epciFeatures = Object.entries(epciGroups).map(([epciName, communes]) => {
-        const totalPopulation = communes.reduce((sum, commune) => {
-          return sum + (parseInt(commune.properties?.population || '0') || 0);
-        }, 0);
-
-        // Use the first commune's geometry as placeholder
-        // (ideally you'd have proper EPCI boundaries)
+      // Enhance EPCI features with aggregated data
+      const enhancedFeatures = epciFeatures.map(feature => {
+        const sirenEpci = feature.properties?.siren_epci;
+        const stats = epciStats[sirenEpci] || { population_totale: 0, nb_communes: 0 };
+        
         return {
-          type: 'Feature' as const,
+          ...feature,
           properties: {
-            libel_epci: epciName,
-            population_totale: totalPopulation,
-            nb_communes: communes.length,
-            siren_epci: communes[0]?.properties?.siren_epci || ''
-          },
-          geometry: communes[0]?.geometry
+            ...feature.properties,
+            population_totale: stats.population_totale,
+            nb_communes: stats.nb_communes
+          }
         };
       });
 
