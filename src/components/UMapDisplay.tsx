@@ -39,6 +39,7 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: UMapDisp
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [tempTitle, setTempTitle] = useState(mapConfig.title);
   const [geoData, setGeoData] = useState<any>(null);
+  const [aiGeneratedData, setAiGeneratedData] = useState<any>(null);
   const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
@@ -55,7 +56,7 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: UMapDisp
     if (map && geoData) {
       renderLayers();
     }
-  }, [map, geoData, visibleLayers]);
+  }, [map, geoData, visibleLayers, aiGeneratedData]);
 
   useEffect(() => {
     if (prompt && map) {
@@ -268,6 +269,77 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: UMapDisp
         }
       }).addTo(map);
     }
+
+    // Render AI-generated GeoJSON data
+    if (aiGeneratedData) {
+      console.log('Rendering AI-generated data:', aiGeneratedData);
+      
+      L.geoJSON(aiGeneratedData, {
+        pointToLayer: (feature, latlng) => {
+          // Custom icons for points
+          const icon = L.divIcon({
+            html: `<div style="background-color: #e11d48; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
+            className: 'custom-marker',
+            iconSize: [16, 16],
+            iconAnchor: [8, 8]
+          });
+          
+          return L.marker(latlng, { icon });
+        },
+        style: (feature) => {
+          // Style for polygons and lines
+          return {
+            color: '#e11d48',
+            weight: 3,
+            fillColor: '#fda4af',
+            fillOpacity: 0.6,
+            opacity: 0.9
+          };
+        },
+        onEachFeature: (feature, layer) => {
+          // Add popups with feature properties
+          const properties = feature.properties || {};
+          const name = properties.name || properties.nom || properties.title || 'Point généré par IA';
+          
+          let popupContent = `<div class="p-2">
+            <h3 class="font-semibold text-sm">${name}</h3>`;
+          
+          // Add other properties
+          Object.keys(properties).forEach(key => {
+            if (key !== 'name' && key !== 'nom' && key !== 'title' && key !== 'icon') {
+              popupContent += `<p class="text-xs text-gray-600">${key}: ${properties[key]}</p>`;
+            }
+          });
+          
+          popupContent += '</div>';
+          
+          layer.bindPopup(popupContent);
+          
+          // Add hover effects for non-point features
+          if (feature.geometry.type !== 'Point') {
+            layer.on('mouseover', () => {
+              if (layer instanceof L.Path) {
+                layer.setStyle({
+                  fillOpacity: 0.8,
+                  weight: 4
+                });
+              }
+            });
+            
+            layer.on('mouseout', () => {
+              if (layer instanceof L.Path) {
+                layer.setStyle({
+                  fillOpacity: 0.6,
+                  weight: 3
+                });
+              }
+            });
+          }
+        }
+      }).addTo(map);
+      
+      toast.success("Données générées par IA ajoutées à la carte!");
+    }
   };
 
   const generateMapFromPrompt = async (prompt: string) => {
@@ -278,11 +350,33 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: UMapDisp
 
       if (error) throw error;
 
+      console.log('Full AI response:', data);
       const mapData = data.mapData;
       
       if (mapData.title) {
         setMapConfig(prev => ({ ...prev, title: mapData.title }));
         setTempTitle(mapData.title);
+      }
+      
+      // Parse the GeoJSON data from the AI response description
+      if (mapData.description) {
+        try {
+          // Extract JSON from markdown code block
+          const jsonMatch = mapData.description.match(/```json\s*([\s\S]*?)\s*```/);
+          if (jsonMatch) {
+            const geoJsonData = JSON.parse(jsonMatch[1]);
+            console.log('Parsed GeoJSON data:', geoJsonData);
+            setAiGeneratedData(geoJsonData);
+            
+            // Zoom to bounds of generated data if it has features
+            if (geoJsonData.features && geoJsonData.features.length > 0 && map) {
+              const group = L.geoJSON(geoJsonData);
+              map.fitBounds(group.getBounds(), { padding: [20, 20] });
+            }
+          }
+        } catch (parseError) {
+          console.error('Error parsing GeoJSON from AI response:', parseError);
+        }
       }
       
       toast.success(`Carte générée: ${mapData.title}`);
