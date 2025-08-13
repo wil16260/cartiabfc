@@ -6,7 +6,10 @@ import { Separator } from '@/components/ui/separator'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { toast } from '@/hooks/use-toast'
 import { supabase } from '@/lib/supabase'
-import { Activity, CheckCircle, XCircle, Clock, User, Trash2, RefreshCw } from 'lucide-react'
+import { Activity, CheckCircle, XCircle, Clock, User, Trash2, RefreshCw, FileUp, Edit, Save } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Label } from '@/components/ui/label'
 
 interface AIGenerationLog {
   id: string
@@ -20,12 +23,25 @@ interface AIGenerationLog {
   execution_time_ms: number | null
   created_at: string
   created_by: string | null
+  validated: boolean | null
+  validation_notes: string | null
+  corrected_geodata_url: string | null
+  corrected_geodata: any
+  validated_by: string | null
+  validated_at: string | null
 }
 
 const AIGenerationLogs = () => {
   const [logs, setLogs] = useState<AIGenerationLog[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedLog, setSelectedLog] = useState<AIGenerationLog | null>(null)
+  const [isValidating, setIsValidating] = useState(false)
+  const [validationForm, setValidationForm] = useState({
+    validated: null as boolean | null,
+    validation_notes: '',
+    corrected_geodata_url: '',
+    corrected_geodata: null as any
+  })
 
   const fetchLogs = async () => {
     try {
@@ -104,6 +120,71 @@ const AIGenerationLogs = () => {
     }
   }
 
+  const validateLog = async (logId: string, validationData: any) => {
+    try {
+      setIsValidating(true)
+      const { error } = await supabase
+        .from('ai_generation_logs')
+        .update({
+          validated: validationData.validated,
+          validation_notes: validationData.validation_notes,
+          corrected_geodata_url: validationData.corrected_geodata_url,
+          corrected_geodata: validationData.corrected_geodata,
+          validated_by: (await supabase.auth.getUser()).data.user?.id,
+          validated_at: new Date().toISOString()
+        })
+        .eq('id', logId)
+
+      if (error) throw error
+
+      // Update local state
+      setLogs(logs.map(log => 
+        log.id === logId 
+          ? { ...log, ...validationData, validated_at: new Date().toISOString() }
+          : log
+      ))
+
+      if (selectedLog?.id === logId) {
+        setSelectedLog({ ...selectedLog, ...validationData, validated_at: new Date().toISOString() })
+      }
+
+      setIsValidating(false)
+      toast({
+        title: "Validation enregistrée",
+        description: validationData.validated ? "Log validé avec succès" : "Log marqué comme invalide"
+      })
+    } catch (error) {
+      console.error('Erreur lors de la validation:', error)
+      setIsValidating(false)
+      toast({
+        title: "Erreur",
+        description: "Impossible de valider le log",
+        variant: "destructive"
+      })
+    }
+  }
+
+  const handleGeodataFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    try {
+      const text = await file.text()
+      const geojson = JSON.parse(text)
+      setValidationForm(prev => ({ ...prev, corrected_geodata: geojson }))
+      toast({
+        title: "Fichier chargé",
+        description: "GeoJSON importé avec succès"
+      })
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Fichier GeoJSON invalide",
+        variant: "destructive"
+      })
+    }
+  }
+
   useEffect(() => {
     fetchLogs()
   }, [])
@@ -119,6 +200,27 @@ const AIGenerationLogs = () => {
       return <Badge variant="destructive" className="gap-1"><XCircle className="h-3 w-3" />Échec</Badge>
     }
   }
+
+  const getValidationBadge = (validated: boolean | null) => {
+    if (validated === true) {
+      return <Badge variant="default" className="gap-1"><CheckCircle className="h-3 w-3" />Validé</Badge>
+    } else if (validated === false) {
+      return <Badge variant="destructive" className="gap-1"><XCircle className="h-3 w-3" />Invalide</Badge>
+    } else {
+      return <Badge variant="secondary" className="gap-1"><Clock className="h-3 w-3" />En attente</Badge>
+    }
+  }
+
+  useEffect(() => {
+    if (selectedLog) {
+      setValidationForm({
+        validated: selectedLog.validated,
+        validation_notes: selectedLog.validation_notes || '',
+        corrected_geodata_url: selectedLog.corrected_geodata_url || '',
+        corrected_geodata: selectedLog.corrected_geodata
+      })
+    }
+  }, [selectedLog])
 
   if (loading) {
     return (
@@ -169,7 +271,10 @@ const AIGenerationLogs = () => {
                       <CardContent className="p-4">
                         <div className="space-y-2">
                           <div className="flex items-center justify-between">
-                            {getStatusBadge(log.success, log.error_message)}
+                            <div className="flex gap-1">
+                              {getStatusBadge(log.success, log.error_message)}
+                              {getValidationBadge(log.validated)}
+                            </div>
                             <span className="text-xs text-muted-foreground">
                               {formatDate(log.created_at)}
                             </span>
@@ -283,6 +388,108 @@ const AIGenerationLogs = () => {
                         </div>
                       </>
                     )}
+
+                    <Separator />
+
+                    <Separator />
+
+                    {/* Validation Section */}
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="font-medium">Validation</h4>
+                        {getValidationBadge(selectedLog.validated)}
+                      </div>
+                      
+                      <div className="space-y-4">
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant={validationForm.validated === true ? "default" : "outline"}
+                            onClick={() => setValidationForm(prev => ({ ...prev, validated: true }))}
+                          >
+                            <CheckCircle className="h-4 w-4 mr-1" />
+                            Valider
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant={validationForm.validated === false ? "destructive" : "outline"}
+                            onClick={() => setValidationForm(prev => ({ ...prev, validated: false }))}
+                          >
+                            <XCircle className="h-4 w-4 mr-1" />
+                            Invalider
+                          </Button>
+                        </div>
+
+                        <div>
+                          <Label htmlFor="validation_notes" className="text-sm">Notes de validation</Label>
+                          <Textarea
+                            id="validation_notes"
+                            placeholder="Commentaires sur la validation..."
+                            value={validationForm.validation_notes}
+                            onChange={(e) => setValidationForm(prev => ({ ...prev, validation_notes: e.target.value }))}
+                            className="mt-1"
+                          />
+                        </div>
+
+                        {validationForm.validated === false && (
+                          <div className="space-y-3 border-l-4 border-destructive pl-4">
+                            <div>
+                              <Label htmlFor="corrected_url" className="text-sm">URL des données corrigées</Label>
+                              <Input
+                                id="corrected_url"
+                                placeholder="https://ideo.ternum-bfc.fr/data/..."
+                                value={validationForm.corrected_geodata_url}
+                                onChange={(e) => setValidationForm(prev => ({ ...prev, corrected_geodata_url: e.target.value }))}
+                                className="mt-1"
+                              />
+                            </div>
+                            
+                            <div>
+                              <Label className="text-sm">Ou importer un fichier GeoJSON</Label>
+                              <div className="mt-1 flex items-center gap-2">
+                                <input
+                                  type="file"
+                                  accept=".json,.geojson"
+                                  onChange={handleGeodataFileUpload}
+                                  className="hidden"
+                                  id="geodata-upload"
+                                />
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => document.getElementById('geodata-upload')?.click()}
+                                >
+                                  <FileUp className="h-4 w-4 mr-1" />
+                                  Importer GeoJSON
+                                </Button>
+                                {validationForm.corrected_geodata && (
+                                  <span className="text-xs text-green-600">Fichier chargé</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        <Button
+                          onClick={() => validateLog(selectedLog.id, validationForm)}
+                          disabled={isValidating || validationForm.validated === null}
+                          className="w-full"
+                        >
+                          {isValidating ? (
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          ) : (
+                            <Save className="h-4 w-4 mr-2" />
+                          )}
+                          Enregistrer la validation
+                        </Button>
+                      </div>
+
+                      {selectedLog.validated_at && (
+                        <p className="text-xs text-muted-foreground mt-2">
+                          Validé le: {formatDate(selectedLog.validated_at)}
+                        </p>
+                      )}
+                    </div>
 
                     <Separator />
 

@@ -116,15 +116,17 @@ serve(async (req) => {
             - https://ideo.ternum-bfc.fr/ (données territoriales BFC)
             - https://www.data.gouv.fr/ (données publiques françaises)
             
-            Répondez avec un JSON contenant:
-            - title: Un titre descriptif pour la carte
-            - description: Une description détaillée de ce qui doit être affiché  
-            - dataLevel: Le niveau géographique à utiliser ("communes", "departments", "epci")
-            - dataProperty: La propriété à utiliser pour colorer (ex: "population", "code_departement", "libel_epci")
-            - colorScheme: Le schéma de couleur ("gradient", "categorical", "threshold")
-            - colors: Un tableau de couleurs à utiliser (5 couleurs pour gradient, 3-8 pour categorical)
-            - analysis: Une analyse géographique pertinente
-            - dataSources: Les sources de données recommandées pour cette carte (mentionner ideo.ternum-bfc.fr ou data.gouv.fr si pertinent)
+            Répondez UNIQUEMENT avec un objet JSON contenant les coordonnées GeoJSON précises et une analyse textuelle séparée:
+            {
+              "coordinates": {
+                "type": "FeatureCollection",
+                "features": [/* coordonnées GeoJSON précises */]
+              },
+              "analysis": "Analyse géographique détaillée en texte",
+              "dataLevel": "communes|departments|epci",
+              "title": "Titre de la carte",
+              "dataSources": ["source1", "source2"]
+            }
             
             Niveaux disponibles:
             - "communes": Données communales avec nom, population, maire, EPCI, etc.
@@ -247,8 +249,11 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true,
-        mapData,
-        rawResponse: generatedContent
+        coordinates: mapData.coordinates || null,
+        analysis: mapData.analysis || generatedContent,
+        title: mapData.title || "Carte générée",
+        dataLevel: mapData.dataLevel || "communes",
+        dataSources: mapData.dataSources || []
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )

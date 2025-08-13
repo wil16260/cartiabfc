@@ -42,6 +42,7 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: UMapDisp
   const [aiGeneratedData, setAiGeneratedData] = useState<any>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [showDataVisualization, setShowDataVisualization] = useState(true);
+  const [aiAnalysis, setAiAnalysis] = useState<string>("");
 
   useEffect(() => {
     loadMapData();
@@ -534,50 +535,28 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: UMapDisp
       if (error) throw error;
 
       console.log('Full AI response:', data);
-      const mapData = data.mapData;
       
-      if (mapData.title) {
-        setMapConfig(prev => ({ ...prev, title: mapData.title }));
-        setTempTitle(mapData.title);
+      // Store AI analysis text
+      if (data.analysis) {
+        setAiAnalysis(data.analysis);
       }
       
-      // Process AI response to enhance existing geographic data
-      if (mapData.description) {
-        try {
-          // Extract JSON from markdown code block
-          const jsonMatch = mapData.description.match(/```json\s*([\s\S]*?)\s*```/);
-          if (jsonMatch) {
-            const aiResponse = JSON.parse(jsonMatch[1]);
-            console.log('Parsed AI response:', aiResponse);
-            
-            // Check if it's point data (geocoding) or data enhancement
-            if (aiResponse.features && aiResponse.features.length > 0) {
-              const firstFeature = aiResponse.features[0];
-              
-              if (firstFeature.geometry.type === 'Point') {
-                // Point data - display as markers
-                setAiGeneratedData(aiResponse);
-              } else {
-                // Polygon data - use as data enhancement for existing boundaries
-                setAiGeneratedData({
-                  enhancedFeatures: aiResponse.features,
-                  metadata: aiResponse.metadata
-                });
-              }
-              
-              // Zoom to bounds if point data
-              if (firstFeature.geometry.type === 'Point' && map) {
-                const group = L.geoJSON(aiResponse);
-                map.fitBounds(group.getBounds(), { padding: [20, 20] });
-              }
-            }
-          }
-        } catch (parseError) {
-          console.error('Error parsing GeoJSON from AI response:', parseError);
+      // Process coordinates if available
+      if (data.coordinates) {
+        setAiGeneratedData(data.coordinates);
+        if (map && data.coordinates.features && data.coordinates.features.length > 0) {
+          const group = L.geoJSON(data.coordinates);
+          map.fitBounds(group.getBounds(), { padding: [20, 20] });
         }
       }
       
-      toast.success(`Carte générée: ${mapData.title}`);
+      // Update map title
+      if (data.title) {
+        setMapConfig(prev => ({ ...prev, title: data.title }));
+        setTempTitle(data.title);
+      }
+      
+      toast.success(`Carte générée: ${data.title || 'Nouvelle carte'}`);
     } catch (error) {
       console.error('Error generating map:', error);
       toast.error("Erreur lors de la génération de la carte");
@@ -724,6 +703,17 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: UMapDisp
             </p>
           )}
         </div>
+        
+        {/* AI Analysis Section */}
+        {aiAnalysis && (
+          <div className="mt-6 p-4 bg-muted/50 rounded-lg">
+            <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
+              <Map className="h-4 w-4" />
+              Analyse géographique IA
+            </h3>
+            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{aiAnalysis}</p>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

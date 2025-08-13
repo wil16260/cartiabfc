@@ -50,6 +50,8 @@ export type Database = {
       ai_generation_logs: {
         Row: {
           ai_response: Json | null
+          corrected_geodata: Json | null
+          corrected_geodata_url: string | null
           created_at: string
           created_by: string | null
           error_message: string | null
@@ -60,9 +62,15 @@ export type Database = {
           success: boolean
           system_prompt: string | null
           user_prompt: string
+          validated: boolean | null
+          validated_at: string | null
+          validated_by: string | null
+          validation_notes: string | null
         }
         Insert: {
           ai_response?: Json | null
+          corrected_geodata?: Json | null
+          corrected_geodata_url?: string | null
           created_at?: string
           created_by?: string | null
           error_message?: string | null
@@ -73,9 +81,15 @@ export type Database = {
           success?: boolean
           system_prompt?: string | null
           user_prompt: string
+          validated?: boolean | null
+          validated_at?: string | null
+          validated_by?: string | null
+          validation_notes?: string | null
         }
         Update: {
           ai_response?: Json | null
+          corrected_geodata?: Json | null
+          corrected_geodata_url?: string | null
           created_at?: string
           created_by?: string | null
           error_message?: string | null
@@ -86,6 +100,10 @@ export type Database = {
           success?: boolean
           system_prompt?: string | null
           user_prompt?: string
+          validated?: boolean | null
+          validated_at?: string | null
+          validated_by?: string | null
+          validation_notes?: string | null
         }
         Relationships: []
       }
