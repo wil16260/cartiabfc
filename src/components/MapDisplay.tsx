@@ -485,7 +485,9 @@ const MapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: MapDispla
       } else {
         // Fallback: Load commune data for aggregation if no external data
         const communeResponse = await fetch('/data/com_bfc3.json');
-        const communeData = await communeResponse.json();
+        const communeText = await communeResponse.text();
+        const communeLines = communeText.trim().split('\n');
+        const communeData = communeLines.map(line => JSON.parse(line));
         
         // Aggregate commune statistics by EPCI SIREN
         const epciStats = {};

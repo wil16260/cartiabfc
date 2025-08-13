@@ -89,8 +89,9 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: UMapDisp
       let communeFeatures = [];
       try {
         const communeResponse = await fetch('/data/com_bfc3.json');
-        const communeData = await communeResponse.json();
-        communeFeatures = communeData.features || [];
+        const communeText = await communeResponse.text();
+        const communeLines = communeText.trim().split('\n');
+        communeFeatures = communeLines.map(line => JSON.parse(line));
         console.log('Loaded communes:', communeFeatures.length);
       } catch (error) {
         console.log('Commune data not available:', error);
