@@ -123,6 +123,12 @@ export default function DocumentManager() {
         uploadedAt: new Date().toISOString()
       };
 
+      // Get current user ID first
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        throw new Error('Utilisateur non authentifié')
+      }
+
       const documentData = {
         name: formData.name,
         description: formData.description || null,
@@ -131,7 +137,7 @@ export default function DocumentManager() {
         file_size: fileSize,
         prompt: formData.prompt || null,
         metadata: metadata,
-        created_by: (await supabase.auth.getUser()).data.user?.id
+        created_by: user.id
       };
 
       if (editingDoc) {

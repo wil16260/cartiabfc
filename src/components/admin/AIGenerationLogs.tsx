@@ -123,6 +123,13 @@ const AIGenerationLogs = () => {
   const validateLog = async (logId: string, validationData: any) => {
     try {
       setIsValidating(true)
+      
+      // Get current user ID first
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        throw new Error('Utilisateur non authentifié')
+      }
+
       const { error } = await supabase
         .from('ai_generation_logs')
         .update({
@@ -130,7 +137,7 @@ const AIGenerationLogs = () => {
           validation_notes: validationData.validation_notes,
           corrected_geodata_url: validationData.corrected_geodata_url,
           corrected_geodata: validationData.corrected_geodata,
-          validated_by: (await supabase.auth.getUser()).data.user?.id,
+          validated_by: user.id,
           validated_at: new Date().toISOString()
         })
         .eq('id', logId)
