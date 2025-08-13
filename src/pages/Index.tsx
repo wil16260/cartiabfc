@@ -201,7 +201,12 @@ const Index = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <SearchBar onSearch={handleSearch} isLoading={isGenerating} />
+        <SearchBar 
+          onSearch={handleSearch} 
+          isLoading={isGenerating}
+          mapTypes={mapTypes}
+          onMapTypeToggle={handleMapTypeToggle}
+        />
             <div className="flex items-center gap-3">
               <Button 
                 variant="outline" 
