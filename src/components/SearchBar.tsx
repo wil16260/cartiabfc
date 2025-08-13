@@ -10,16 +10,16 @@ import { toast } from "sonner";
 interface SearchBarProps {
   onSearch: (prompt: string) => void;
   isLoading?: boolean;
-  mapTypes: {
+  mapTypes?: {
     id: string;
     name: string;
     enabled: boolean;
     description?: string;
   }[];
-  onMapTypeToggle: (mapTypeId: string, enabled: boolean) => void;
+  onMapTypeToggle?: (mapTypeId: string, enabled: boolean) => void;
 }
 
-const SearchBar = ({ onSearch, isLoading = false, mapTypes, onMapTypeToggle }: SearchBarProps) => {
+const SearchBar = ({ onSearch, isLoading = false, mapTypes = [], onMapTypeToggle }: SearchBarProps) => {
   const [prompt, setPrompt] = useState("");
   const [selectedMapType, setSelectedMapType] = useState("");
 
@@ -33,6 +33,8 @@ const SearchBar = ({ onSearch, isLoading = false, mapTypes, onMapTypeToggle }: S
   };
 
   const handleMapTypeChange = (value: string) => {
+    if (!onMapTypeToggle) return;
+    
     // First disable all map types
     mapTypes.forEach(mapType => {
       onMapTypeToggle(mapType.id, false);
@@ -41,6 +43,40 @@ const SearchBar = ({ onSearch, isLoading = false, mapTypes, onMapTypeToggle }: S
     onMapTypeToggle(value, true);
     setSelectedMapType(value);
   };
+
+  // Early return if mapTypes is not available yet
+  if (!mapTypes || mapTypes.length === 0) {
+    return (
+      <div className="w-full">
+        <form onSubmit={handleSubmit} className="relative">
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <Input
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              placeholder="Décrivez la carte que vous souhaitez créer... (ex: 'Montrer toutes les communes du Doubs avec population et code couleur par densité')"
+              className="pl-12 pr-32 h-14 text-base border-2 border-primary/20 focus:border-primary transition-colors"
+              disabled={isLoading}
+            />
+            <Button
+              type="submit"
+              variant="hero"
+              size="lg"
+              disabled={isLoading || !prompt.trim()}
+              className="absolute right-2 top-1/2 transform -translate-y-1/2 gap-2"
+            >
+              {isLoading ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+              ) : (
+                <Sparkles className="h-4 w-4" />
+              )}
+              Générer la carte
+            </Button>
+          </div>
+        </form>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full space-y-4">
