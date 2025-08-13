@@ -27,51 +27,6 @@ const FilterPanel = ({ layers, mapTypes, onLayerToggle, onMapTypeToggle }: Filte
 
   return (
     <div className="space-y-4">
-      {/* Map Types Section */}
-      <Card className="h-fit">
-        <CardHeader className="pb-4">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Map className="h-5 w-5 text-primary" />
-            Types de cartes
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <h4 className="font-medium mb-3 text-sm text-muted-foreground uppercase tracking-wide">
-              Assistance IA
-            </h4>
-            <div className="space-y-3">
-              {mapTypes.map((mapType) => (
-                <div key={mapType.id} className="flex items-start space-x-3">
-                  <Checkbox
-                    id={mapType.id}
-                    checked={mapType.enabled}
-                    onCheckedChange={(checked) => 
-                      onMapTypeToggle(mapType.id, checked as boolean)
-                    }
-                  />
-                  <div className="grid gap-1.5 leading-none">
-                    <Label 
-                      htmlFor={mapType.id}
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-2"
-                    >
-                      {mapType.id === 'geocodage' && <MapPin className="h-3 w-3" />}
-                      {mapType.id === 'chloroplethe' && <Palette className="h-3 w-3" />}
-                      {mapType.id === 'complexe' && <Layers className="h-3 w-3" />}
-                      {mapType.name}
-                    </Label>
-                    {mapType.description && (
-                      <p className="text-xs text-muted-foreground">
-                        {mapType.description}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Data Layers Section */}
       <Card className="h-fit">
