@@ -26,7 +26,7 @@ serve(async (req) => {
   }
 
   try {
-    const { prompt } = await req.json()
+    const { prompt, mapType, step = 1 } = await req.json()
     logData.user_prompt = prompt
 
     // Get Supabase client with service role key for admin operations
@@ -89,7 +89,101 @@ serve(async (req) => {
       throw new Error(`${activeConfig.api_key_name || 'MISTRAL_API_KEY'} not configured`)
     }
 
-    // Generate map description with Mistral
+    // Two-step process based on step parameter
+    let systemPrompt = activeConfig.system_prompt || 'Vous êtes un assistant IA géospatial expert qui aide les utilisateurs à créer de belles cartes précises de la région Bourgogne-Franche-Comté.'
+    let userPrompt = ''
+    
+    if (step === 1) {
+      // Step 1: Analysis and search information
+      systemPrompt = 'Vous êtes un expert géospatial qui analyse les demandes de cartographie pour la région Bourgogne-Franche-Comté. Votre rôle est de comprendre la demande et de fournir une analyse détaillée.'
+      userPrompt = `Analysez cette demande de carte pour la région Bourgogne-Franche-Comté: "${prompt}"
+
+Répondez UNIQUEMENT avec un objet JSON contenant:
+{
+  "analysis": "Analyse détaillée de la demande en français",
+  "searchKeywords": ["mot-clé1", "mot-clé2", "mot-clé3"],
+  "dataLevel": "communes|epci|departments",
+  "title": "Titre de la carte",
+  "description": "Description de ce qui sera cartographié",
+  "sources": ["source1", "source2"]
+}`
+    } else {
+      // Step 2: Generate geojson based on map type
+      if (mapType === 'choroplèthe') {
+        systemPrompt = 'Vous créez des cartes choroplèthes pour la région Bourgogne-Franche-Comté en joignant des données avec les géométries appropriées.'
+        userPrompt = `Créez une carte choroplèthe basée sur: "${prompt}"
+
+IMPORTANT - Clés de jointure:
+- Pour les communes: utilisez "code_insee" 
+- Pour les EPCI: utilisez "siren_epci"
+- Pour les départements: utilisez "code_departement"
+
+Répondez UNIQUEMENT avec un objet JSON:
+{
+  "type": "choroplèthe",
+  "dataLevel": "communes|epci|departments",
+  "joinKey": "code_insee|siren_epci|code_departement",
+  "dataProperty": "nom_de_la_propriété_à_visualiser",
+  "colorScheme": "gradient|categorical",
+  "colors": ["#couleur1", "#couleur2", ...],
+  "title": "Titre de la carte",
+  "analysis": "Analyse des données à visualiser",
+  "legend": {
+    "title": "Titre de la légende",
+    "unit": "unité de mesure"
+  }
+}`
+      } else if (mapType === 'geocodage') {
+        systemPrompt = 'Vous géocodez des adresses pour créer des cartes de points pour la région Bourgogne-Franche-Comté.'
+        userPrompt = `Géocodez les adresses basées sur: "${prompt}"
+
+Répondez UNIQUEMENT avec un objet JSON:
+{
+  "type": "geocodage",
+  "addresses": [
+    {
+      "address": "adresse complète",
+      "latitude": 47.123,
+      "longitude": 5.456,
+      "properties": {
+        "name": "nom du lieu",
+        "category": "catégorie"
+      }
+    }
+  ],
+  "title": "Titre de la carte",
+  "analysis": "Analyse des lieux géocodés",
+  "markerStyle": {
+    "color": "#couleur",
+    "size": "small|medium|large"
+  }
+}`
+      } else if (mapType === 'complexe') {
+        systemPrompt = 'Vous créez des cartes complexes combinant plusieurs types de données géospatiales pour la région Bourgogne-Franche-Comté.'
+        userPrompt = `Créez une carte complexe basée sur: "${prompt}"
+
+Répondez UNIQUEMENT avec un objet JSON:
+{
+  "type": "complexe",
+  "layers": [
+    {
+      "name": "nom du layer",
+      "type": "choroplèthe|points|lines|polygons",
+      "dataLevel": "communes|epci|departments",
+      "style": {
+        "color": "#couleur",
+        "opacity": 0.8
+      }
+    }
+  ],
+  "title": "Titre de la carte",
+  "analysis": "Analyse des couches de données",
+  "interactions": ["hover", "click", "filter"]
+}`
+      }
+    }
+
+    // Generate response with Mistral
     const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -101,65 +195,11 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: activeConfig.system_prompt || 'Vous êtes un assistant IA géospatial expert qui aide les utilisateurs à créer de belles cartes précises de la région Bourgogne-Franche-Comté en utilisant les données communales disponibles.'
+            content: systemPrompt
           },
           {
             role: 'user',
-            content: `Créer une carte de la région Bourgogne-Franche-Comté basée sur cette description: ${prompt}. 
-
-            IMPORTANT: Pour générer des données géospatiales précises, utilisez en priorité les sources officielles suivantes:
-            - https://ideo.ternum-bfc.fr/ (données territoriales BFC)
-            - https://www.data.gouv.fr/ (données publiques françaises)
-            
-            Répondez UNIQUEMENT avec un objet JSON contenant les coordonnées GeoJSON précises et une analyse textuelle séparée:
-            {
-              "coordinates": {
-                "type": "FeatureCollection",
-                "features": [/* coordonnées GeoJSON précises */]
-              },
-              "analysis": "Analyse géographique détaillée en texte",
-              "dataLevel": "communes|departments|epci",
-              "title": "Titre de la carte",
-              "dataSources": ["source1", "source2"]
-            }
-            
-            Niveaux disponibles:
-            - "communes": Données communales avec nom, population, maire, EPCI, etc.
-            - "departments": Données départementales (21, 25, 39, 58, 70, 71, 89, 90)
-            - "epci": Groupements intercommunaux (CC, CA, CU, etc.)
-            
-            Exemple pour les communes par population:
-            {
-              "title": "Population par commune",
-              "description": "Répartition démographique des communes",
-              "dataLevel": "communes",
-              "dataProperty": "population",
-              "colorScheme": "gradient",
-              "colors": ["#fee5d9", "#fcae91", "#fb6a4a", "#de2d26", "#a50f15"],
-              "analysis": "Les communes les plus peuplées se concentrent autour des centres urbains."
-            }
-            
-            Exemple pour les départements:
-            {
-              "title": "Départements de Bourgogne-Franche-Comté",
-              "description": "Visualisation des 8 départements de la région",
-              "dataLevel": "departments",
-              "dataProperty": "code_departement",
-              "colorScheme": "categorical",
-              "colors": ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b", "#e377c2", "#7f7f7f"],
-              "analysis": "Les 8 départements: Côte-d'Or (21), Doubs (25), Jura (39), Nièvre (58), Haute-Saône (70), Saône-et-Loire (71), Yonne (89), Territoire de Belfort (90)."
-            }
-            
-            Exemple pour les EPCI:
-            {
-              "title": "Établissements Publics de Coopération Intercommunale",
-              "description": "Visualisation des EPCI par type d'intercommunalité",
-              "dataLevel": "epci",
-              "dataProperty": "libel_epci",
-              "colorScheme": "categorical",
-              "colors": ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b", "#e377c2", "#7f7f7f"],
-              "analysis": "Les EPCI regroupent les communes selon différents types: CC (Communautés de Communes), CA (Communautés d'Agglomération), CU (Communautés Urbaines)."
-            }`
+            content: userPrompt
           }
         ],
         temperature: 0.3,
@@ -244,6 +284,9 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true,
+        step: step,
+        data: mapData,
+        // Legacy fields for compatibility
         coordinates: mapData.coordinates || null,
         analysis: mapData.analysis || generatedContent,
         title: mapData.title || "Carte générée",

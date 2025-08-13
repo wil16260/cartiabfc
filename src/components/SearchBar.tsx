@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Search, Sparkles, Map, MapPin, Palette, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,7 +21,16 @@ interface SearchBarProps {
 
 const SearchBar = ({ onSearch, isLoading = false, mapTypes = [], onMapTypeToggle }: SearchBarProps) => {
   const [prompt, setPrompt] = useState("");
-  const [selectedMapType, setSelectedMapType] = useState("");
+  const [selectedMapType, setSelectedMapType] = useState("chloroplethe");
+
+  // Set initial map type selection
+  useEffect(() => {
+    if (mapTypes && mapTypes.length > 0 && onMapTypeToggle) {
+      // Ensure chloroplethe is selected by default
+      onMapTypeToggle('chloroplethe', true);
+      setSelectedMapType('chloroplethe');
+    }
+  }, [mapTypes, onMapTypeToggle]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

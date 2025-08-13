@@ -89,39 +89,62 @@ const Index = () => {
     setShowProgress(true);
     
     try {
-      // Enhanced prompt with selected map types
-      const mapTypesText = mapTypes
-        .filter(type => type.enabled)
-        .map(type => type.name)
-        .join(', ');
+      // Get selected map type
+      const selectedMapType = mapTypes.find(type => type.enabled);
+      const mapType = selectedMapType?.id || 'choroplèthe'; // default to choroplèthe
       
-      const enhancedPrompt = mapTypesText 
-        ? `${prompt}. Types de cartes à considérer: ${mapTypesText}`
-        : prompt;
-
-      console.log('Sending enhanced prompt:', enhancedPrompt);
+      console.log('Selected map type:', mapType);
       
-      const { data, error } = await supabase.functions.invoke('generate-map-with-mistral', {
-        body: { prompt: enhancedPrompt }
+      // Step 1: Analysis
+      console.log('Step 1: Analyzing request...');
+      const { data: step1Data, error: step1Error } = await supabase.functions.invoke('generate-map-with-mistral', {
+        body: { 
+          prompt: prompt,
+          mapType: mapType,
+          step: 1 
+        }
       });
 
-      if (error) {
-        console.error('Supabase function error:', error);
-        throw new Error('Failed to generate map');
+      if (step1Error) {
+        console.error('Step 1 error:', step1Error);
+        throw new Error('Failed to analyze request');
       }
 
-      if (!data?.success) {
-        console.error('Map generation failed:', data);
-        throw new Error(data?.error || 'Failed to generate map');
+      if (!step1Data?.success) {
+        console.error('Step 1 failed:', step1Data);
+        throw new Error(step1Data?.error || 'Failed to analyze request');
       }
 
-      console.log('AI response:', data);
+      console.log('Step 1 response:', step1Data);
+      
+      // Step 2: Generate geojson based on map type
+      console.log('Step 2: Generating map data...');
+      const { data: step2Data, error: step2Error } = await supabase.functions.invoke('generate-map-with-mistral', {
+        body: { 
+          prompt: prompt,
+          mapType: mapType,
+          step: 2 
+        }
+      });
+
+      if (step2Error) {
+        console.error('Step 2 error:', step2Error);
+        throw new Error('Failed to generate map data');
+      }
+
+      if (!step2Data?.success) {
+        console.error('Step 2 failed:', step2Data);
+        throw new Error(step2Data?.error || 'Failed to generate map data');
+      }
+
+      console.log('Step 2 response:', step2Data);
       
       // Update map layers based on AI response
-      if (data.dataLevel) {
+      if (step1Data.dataLevel || step2Data.dataLevel) {
+        const dataLevel = step1Data.dataLevel || step2Data.dataLevel;
         const newLayers = mapLayers.map(layer => ({
           ...layer,
-          enabled: shouldEnableLayer(layer.id, data.dataLevel)
+          enabled: shouldEnableLayer(layer.id, dataLevel)
         }));
         setMapLayers(newLayers);
       }
