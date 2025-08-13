@@ -22,15 +22,8 @@ const SearchBar = ({ onSearch, isLoading = false }: SearchBarProps) => {
     onSearch(prompt.trim());
   };
 
-  const examplePrompts = [
-    "Montrer toutes les communes de Côte-d'Or avec données démographiques",
-    "Créer une carte choroplèthe des départements de Bourgogne-Franche-Comté par PIB",
-    "Cartographier les offices de tourisme dans le Jura avec évaluations",
-    "Afficher les zones viticoles en Bourgogne avec appellations"
-  ];
-
   return (
-    <div className="w-full space-y-4">
+    <div className="w-full">
       <form onSubmit={handleSubmit} className="relative">
         <div className="relative">
           <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
@@ -57,22 +50,6 @@ const SearchBar = ({ onSearch, isLoading = false }: SearchBarProps) => {
           </Button>
         </div>
       </form>
-
-      <div className="space-y-2">
-        <p className="text-sm text-muted-foreground font-medium">Essayez ces exemples :</p>
-        <div className="flex flex-wrap gap-2">
-          {examplePrompts.map((example, index) => (
-            <button
-              key={index}
-              onClick={() => setPrompt(example)}
-              className="text-xs bg-muted hover:bg-primary/10 text-muted-foreground hover:text-primary px-3 py-2 rounded-full transition-colors border border-border hover:border-primary/30"
-              disabled={isLoading}
-            >
-              {example}
-            </button>
-          ))}
-        </div>
-      </div>
     </div>
   );
 };
