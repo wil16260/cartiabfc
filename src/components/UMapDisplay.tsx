@@ -143,17 +143,62 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: UMapDisp
       attribution: '© CARTO'
     });
 
+    const planIgnLayer = L.tileLayer('https://wxs.ign.fr/choisirgeoportail/geoportail/wmts?REQUEST=GetTile&SERVICE=WMTS&VERSION=1.0.0&STYLE=normal&TILEMATRIXSET=PM&FORMAT=image/png&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}', {
+      attribution: '© IGN'
+    });
+
     // Add default layer
     osmLayer.addTo(leafletMap);
 
-    // Layer control
-    const baseLayers = {
-      "OpenStreetMap": osmLayer,
-      "Satellite": satelliteLayer,
-      "Carto Light": cartoLayer
-    };
+    // Create custom layer control with checkboxes
+    const LayerControlCheckbox = L.Control.extend({
+      onAdd: function() {
+        const container = L.DomUtil.create('div', 'leaflet-control-layers leaflet-control-layers-expanded');
+        container.style.backgroundColor = 'white';
+        container.style.padding = '10px';
+        container.style.border = '2px solid rgba(0,0,0,0.2)';
+        container.style.borderRadius = '5px';
+        
+        const title = L.DomUtil.create('div', '', container);
+        title.innerHTML = '<strong>Couches de base</strong>';
+        title.style.marginBottom = '5px';
 
-    L.control.layers(baseLayers).addTo(leafletMap);
+        const layers = [
+          { name: 'OpenStreetMap', layer: osmLayer },
+          { name: 'Satellite', layer: satelliteLayer },
+          { name: 'Carto Light', layer: cartoLayer },
+          { name: 'Plan IGN', layer: planIgnLayer }
+        ];
+
+        layers.forEach(({ name, layer }) => {
+          const label = L.DomUtil.create('label', '', container);
+          label.style.display = 'block';
+          label.style.margin = '2px 0';
+          label.style.cursor = 'pointer';
+          
+          const checkbox = L.DomUtil.create('input', '', label);
+          checkbox.type = 'checkbox';
+          checkbox.checked = name === 'OpenStreetMap';
+          checkbox.style.marginRight = '5px';
+          
+          const span = L.DomUtil.create('span', '', label);
+          span.innerHTML = name;
+          
+          L.DomEvent.on(checkbox, 'change', function() {
+            if (checkbox.checked) {
+              leafletMap.addLayer(layer);
+            } else {
+              leafletMap.removeLayer(layer);
+            }
+          });
+        });
+
+        L.DomEvent.disableClickPropagation(container);
+        return container;
+      }
+    });
+
+    new LayerControlCheckbox({ position: 'topright' }).addTo(leafletMap);
 
     // Initialize drawing features
     const drawnItemsGroup = new L.FeatureGroup();
