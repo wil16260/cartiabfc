@@ -30,8 +30,14 @@ const Admin = () => {
   ]);
 
   useEffect(() => {
-    if (isAdmin) {
+    let mounted = true;
+    
+    if (isAdmin && mounted) {
       fetchAiConfigs();
+    }
+    
+    return () => {
+      mounted = false;
     }
   }, [isAdmin]);
 
@@ -39,7 +45,7 @@ const Admin = () => {
     try {
       const { data, error } = await supabase
         .from('ai_config')
-        .select('*')
+        .select('id, model_name, api_key_name, system_prompt, is_active, created_at')
         .order('created_at', { ascending: false });
       
       if (error) throw error;

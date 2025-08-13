@@ -8,17 +8,38 @@ export const useAuth = () => {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    let mounted = true;
+
     // Vérifier la session actuelle
     const checkUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      setUser(user)
-      
-      if (user) {
-        const adminStatus = await checkAdminAuth()
-        setIsAdmin(adminStatus)
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        
+        if (!mounted) return;
+        
+        setUser(user)
+        
+        if (user) {
+          const adminStatus = await checkAdminAuth()
+          if (mounted) {
+            setIsAdmin(adminStatus)
+          }
+        } else {
+          if (mounted) {
+            setIsAdmin(false)
+          }
+        }
+      } catch (error) {
+        console.error('Auth check error:', error)
+        if (mounted) {
+          setUser(null)
+          setIsAdmin(false)
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false)
+        }
       }
-      
-      setLoading(false)
     }
 
     checkUser()
@@ -26,20 +47,38 @@ export const useAuth = () => {
     // Écouter les changements d'authentification
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        if (!mounted) return;
+        
         setUser(session?.user ?? null)
         
         if (session?.user) {
-          const adminStatus = await checkAdminAuth()
-          setIsAdmin(adminStatus)
+          try {
+            const adminStatus = await checkAdminAuth()
+            if (mounted) {
+              setIsAdmin(adminStatus)
+            }
+          } catch (error) {
+            console.error('Admin check error:', error)
+            if (mounted) {
+              setIsAdmin(false)
+            }
+          }
         } else {
-          setIsAdmin(false)
+          if (mounted) {
+            setIsAdmin(false)
+          }
         }
         
-        setLoading(false)
+        if (mounted) {
+          setLoading(false)
+        }
       }
     )
 
-    return () => subscription.unsubscribe()
+    return () => {
+      mounted = false;
+      subscription.unsubscribe()
+    }
   }, [])
 
   const signOut = async () => {
