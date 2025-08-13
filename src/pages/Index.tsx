@@ -7,6 +7,7 @@ import SearchBar from "@/components/SearchBar";
 import FileUpload from "@/components/FileUpload";
 import UMapDisplay from "@/components/UMapDisplay";
 import FilterPanel from "@/components/FilterPanel";
+import ProgressBar from "@/components/ProgressBar";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 
@@ -15,6 +16,7 @@ const Index = () => {
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showFileUpload, setShowFileUpload] = useState(false);
+  const [showProgress, setShowProgress] = useState(false);
   const [mapLayers, setMapLayers] = useState([
     { 
       id: 'base_departments', 
@@ -84,6 +86,7 @@ const Index = () => {
   const handleSearch = async (prompt: string) => {
     setCurrentPrompt(prompt);
     setIsGenerating(true);
+    setShowProgress(true);
     
     try {
       // Enhanced prompt with selected map types
@@ -115,10 +118,10 @@ const Index = () => {
       console.log('AI response:', data);
       
       // Update map layers based on AI response
-      if (data.mapData?.dataLevel) {
+      if (data.dataLevel) {
         const newLayers = mapLayers.map(layer => ({
           ...layer,
-          enabled: shouldEnableLayer(layer.id, data.mapData.dataLevel)
+          enabled: shouldEnableLayer(layer.id, data.dataLevel)
         }));
         setMapLayers(newLayers);
       }
@@ -128,9 +131,14 @@ const Index = () => {
     } catch (error) {
       console.error('Error generating map:', error);
       toast.error(`Erreur lors de la génération de la carte: ${error.message}`);
+      setShowProgress(false);
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const handleProgressComplete = () => {
+    setShowProgress(false);
   };
 
   const shouldEnableLayer = (layerId: string, dataLevel: string) => {
@@ -215,6 +223,17 @@ const Index = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Progress Bar */}
+        {showProgress && (
+          <div className="mb-6">
+            <ProgressBar 
+              isActive={showProgress} 
+              onComplete={handleProgressComplete}
+              duration={6000}
+            />
+          </div>
+        )}
 
         {/* Main Interface */}
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">

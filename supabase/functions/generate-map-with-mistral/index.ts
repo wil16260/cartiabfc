@@ -61,24 +61,19 @@ serve(async (req) => {
       .eq('is_active', true)
       .order('created_at', { ascending: false })
       .limit(1)
-
-    console.log('AI Config query result:', { 
-      configCount: aiConfig?.length, 
-      configError: configError?.message,
-      firstConfigId: aiConfig?.[0]?.id 
-    })
+      .single()
 
     if (configError) {
       console.error('AI config database error:', configError)
       throw new Error(`Database error: ${configError.message}`)
     }
 
-    if (!aiConfig || aiConfig.length === 0) {
+    if (!aiConfig) {
       console.error('No active AI configuration found in database')
       throw new Error('No active AI configuration found')
     }
 
-    const activeConfig = aiConfig[0]
+    const activeConfig = aiConfig
     logData.model_name = activeConfig.model_name
     logData.system_prompt = activeConfig.system_prompt
     
@@ -167,8 +162,8 @@ serve(async (req) => {
             }`
           }
         ],
-        temperature: 0.7,
-        max_tokens: 1000
+        temperature: 0.3,
+        max_tokens: 2000
       }),
     })
 
