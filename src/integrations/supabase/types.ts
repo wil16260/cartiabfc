@@ -274,6 +274,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_active_ai_config: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          model_name: string
+          has_api_key: boolean
+          is_active: boolean
+          created_at: string
+        }[]
+      }
       is_admin: {
         Args: { user_id?: string }
         Returns: boolean
