@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Sparkles, Upload } from "lucide-react";
 import SearchBar from "@/components/SearchBar";
 import FileUpload from "@/components/FileUpload";
+import DirectDataJoin from "@/components/DirectDataJoin";
 import UMapDisplay from "@/components/UMapDisplay";
 import FilterPanel from "@/components/FilterPanel";
 import ProgressBar from "@/components/ProgressBar";
@@ -14,6 +15,7 @@ import { toast } from "sonner";
 const Index = () => {
   const [currentPrompt, setCurrentPrompt] = useState("");
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [generatedMap, setGeneratedMap] = useState<any>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showFileUpload, setShowFileUpload] = useState(false);
   const [showProgress, setShowProgress] = useState(false);
@@ -185,6 +187,17 @@ const Index = () => {
     setUploadedFiles(files);
   };
 
+  const handleDirectJoinComplete = (geojsonData: any) => {
+    // Process the joined data similar to AI response
+    const updatedLayers = mapLayers.map(layer => ({
+      ...layer,
+      enabled: layer.id === 'base_departments' || layer.id === 'data_population'
+    }));
+    setMapLayers(updatedLayers);
+    setGeneratedMap(geojsonData);
+    setShowProgress(false);
+  };
+
   const handleLayerToggle = (layerId: string, enabled: boolean) => {
     setMapLayers(prev => 
       prev.map(layer => 
@@ -246,7 +259,11 @@ const Index = () => {
             </div>
             {showFileUpload && (
               <div className="mt-4 p-4 border rounded-lg bg-muted/50">
-                <FileUpload onFilesUploaded={handleFilesUploaded} />
+            <FileUpload onFilesUploaded={handleFilesUploaded} />
+            <DirectDataJoin 
+              uploadedFiles={uploadedFiles} 
+              onJoinComplete={handleDirectJoinComplete}
+            />
               </div>
             )}
           </CardContent>
@@ -281,6 +298,7 @@ const Index = () => {
               prompt={currentPrompt} 
               isLoading={isGenerating}
               visibleLayers={visibleLayers}
+              generatedMap={generatedMap}
             />
           </div>
         </div>

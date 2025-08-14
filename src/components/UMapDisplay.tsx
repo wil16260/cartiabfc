@@ -21,6 +21,7 @@ interface UMapDisplayProps {
   prompt?: string;
   isLoading?: boolean;
   visibleLayers?: string[];
+  generatedMap?: any;
 }
 
 interface MapConfig {
@@ -28,7 +29,7 @@ interface MapConfig {
   credits: string;
 }
 
-const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: UMapDisplayProps) => {
+const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [], generatedMap }: UMapDisplayProps) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<L.Map | null>(null);
   const [drawnItems, setDrawnItems] = useState<L.FeatureGroup | null>(null);
@@ -65,6 +66,17 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [] }: UMapDisp
       generateMapFromPrompt(prompt);
     }
   }, [prompt, map]);
+
+  useEffect(() => {
+    if (generatedMap && map) {
+      setAiGeneratedData(generatedMap);
+      if (generatedMap.features && generatedMap.features.length > 0) {
+        const group = L.geoJSON(generatedMap);
+        map.fitBounds(group.getBounds(), { padding: [20, 20] });
+      }
+      toast.success("Données jointes affichées sur la carte!");
+    }
+  }, [generatedMap, map]);
 
   const loadMapData = async () => {
     try {
