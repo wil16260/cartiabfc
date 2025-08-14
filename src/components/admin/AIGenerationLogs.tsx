@@ -11,30 +11,34 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 
-interface AIGenerationLog {
+interface AIGenerationLogSummary {
   id: string
   user_prompt: string
-  ai_response: any
-  raw_ai_response: string
   success: boolean
   error_message: string | null
   model_name: string | null
-  system_prompt: string | null
   execution_time_ms: number | null
   created_at: string
   created_by: string | null
   validated: boolean | null
+  validated_at: string | null
+}
+
+interface AIGenerationLogDetails extends AIGenerationLogSummary {
+  ai_response: any
+  raw_ai_response: string
+  system_prompt: string | null
   validation_notes: string | null
   corrected_geodata_url: string | null
   corrected_geodata: any
   validated_by: string | null
-  validated_at: string | null
 }
 
 const AIGenerationLogs = () => {
-  const [logs, setLogs] = useState<AIGenerationLog[]>([])
+  const [logs, setLogs] = useState<AIGenerationLogSummary[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedLog, setSelectedLog] = useState<AIGenerationLog | null>(null)
+  const [selectedLog, setSelectedLog] = useState<AIGenerationLogDetails | null>(null)
+  const [detailsLoading, setDetailsLoading] = useState(false)
   const [isValidating, setIsValidating] = useState(false)
   const [validationForm, setValidationForm] = useState({
     validated: null as boolean | null,
@@ -48,9 +52,9 @@ const AIGenerationLogs = () => {
       setLoading(true)
       const { data, error } = await supabase
         .from('ai_generation_logs')
-        .select('*')
+        .select('id, user_prompt, success, error_message, model_name, execution_time_ms, created_at, created_by, validated, validated_at')
         .order('created_at', { ascending: false })
-        .limit(100)
+        .limit(50)
 
       if (error) throw error
       setLogs(data || [])
@@ -63,6 +67,58 @@ const AIGenerationLogs = () => {
       })
     } finally {
       setLoading(false)
+    }
+  }
+
+  const cleanupOldLogs = async () => {
+    try {
+      // Delete logs older than 30 days
+      const thirtyDaysAgo = new Date()
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+      
+      const { data, error } = await supabase
+        .from('ai_generation_logs')
+        .delete()
+        .lt('created_at', thirtyDaysAgo.toISOString())
+
+      if (error) throw error
+
+      toast({
+        title: "Nettoyage effectué",
+        description: "Les logs anciens ont été supprimés"
+      })
+      
+      fetchLogs()
+    } catch (error) {
+      console.error('Erreur lors du nettoyage:', error)
+      toast({
+        title: "Erreur",
+        description: "Impossible de nettoyer les logs",
+        variant: "destructive"
+      })
+    }
+  }
+
+  const loadLogDetails = async (logId: string) => {
+    try {
+      setDetailsLoading(true)
+      const { data, error } = await supabase
+        .from('ai_generation_logs')
+        .select('*')
+        .eq('id', logId)
+        .single()
+
+      if (error) throw error
+      setSelectedLog(data)
+    } catch (error) {
+      console.error('Erreur lors du chargement des détails:', error)
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les détails du log",
+        variant: "destructive"
+      })
+    } finally {
+      setDetailsLoading(false)
     }
   }
 
@@ -253,6 +309,10 @@ const AIGenerationLogs = () => {
                 <RefreshCw className="h-4 w-4" />
                 Actualiser
               </Button>
+              <Button onClick={cleanupOldLogs} variant="outline" size="sm" className="gap-2">
+                <Trash2 className="h-4 w-4" />
+                Nettoyer (30j+)
+              </Button>
               <Button onClick={clearAllLogs} variant="destructive" size="sm" className="gap-2">
                 <Trash2 className="h-4 w-4" />
                 Tout supprimer
@@ -273,7 +333,7 @@ const AIGenerationLogs = () => {
                       className={`cursor-pointer transition-colors ${
                         selectedLog?.id === log.id ? 'ring-2 ring-primary' : 'hover:bg-muted/50'
                       }`}
-                      onClick={() => setSelectedLog(log)}
+                      onClick={() => loadLogDetails(log.id)}
                     >
                       <CardContent className="p-4">
                         <div className="space-y-2">
