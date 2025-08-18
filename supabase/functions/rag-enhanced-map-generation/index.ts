@@ -81,10 +81,16 @@ Tags: ${doc.metadata?.tags?.join(', ') || 'N/A'}
     }
 
     // 4. Build enhanced prompts with RAG context
-    let systemPrompt = `Vous êtes un expert géospatial spécialisé dans la région Bourgogne-Franche-Comté.
-Vous avez accès aux documents de référence suivants :
+    let systemPrompt = `Vous êtes un expert géospatial spécialisé EXCLUSIVEMENT dans la région Bourgogne-Franche-Comté.
+Vous avez accès aux documents de référence et fichiers GeoJSON suivants :
 
 ${ragContext}
+
+RÈGLES IMPÉRATIVES :
+- Limitez TOUJOURS vos réponses à la région Bourgogne-Franche-Comté UNIQUEMENT
+- Utilisez UNIQUEMENT les codes INSEE, SIREN et structures des documents de référence
+- Pour les GeoJSON, respectez exactement les structures de propriétés disponibles
+- Ne proposez JAMAIS de données en dehors de la région BFC
 
 Utilisez ces informations pour créer des cartes précises et contextualisées.`
 
@@ -92,21 +98,24 @@ Utilisez ces informations pour créer des cartes précises et contextualisées.`
     
     if (step === 1) {
       // Analysis with RAG context
-      systemPrompt += '\n\nVotre rôle est d\'analyser les demandes de cartographie en utilisant les documents de référence pour fournir des informations précises.'
+      systemPrompt += '\n\nVotre rôle est d\'analyser les demandes de cartographie en utilisant les documents de référence pour fournir des informations précises STRICTEMENT pour la région Bourgogne-Franche-Comté.'
       userPrompt = `Analysez cette demande de carte : "${prompt}"
 
-Utilisez les documents de référence pour enrichir votre analyse.
+Utilisez les documents de référence et GeoJSON pour enrichir votre analyse.
+IMPORTANT: Cette analyse doit concerner UNIQUEMENT la région Bourgogne-Franche-Comté.
 
 Répondez UNIQUEMENT avec un objet JSON :
 {
-  "analysis": "Analyse détaillée utilisant les références documentaires",
+  "analysis": "Analyse détaillée utilisant les références documentaires BFC",
   "searchKeywords": ["mot-clé1", "mot-clé2", "mot-clé3"],
   "dataLevel": "communes|epci|departments",
-  "title": "Titre précis basé sur les références",
-  "description": "Description enrichie par les documents",
+  "title": "Titre précis basé sur les références BFC",
+  "description": "Description enrichie par les documents BFC",
   "sources": ["sources des documents de référence"],
   "ragReferences": ["documents utilisés pour l'analyse"],
-  "territorialContext": "Contexte territorial BFC basé sur les références"
+  "territorialContext": "Contexte territorial BFC basé sur les références",
+  "geojsonStructures": ["structures GeoJSON disponibles pour BFC"],
+  "regionalConstraint": "bourgogne-franche-comte"
 }`
     } else {
       // Enhanced generation with RAG

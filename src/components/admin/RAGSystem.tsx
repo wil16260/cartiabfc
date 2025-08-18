@@ -50,6 +50,46 @@ const RECOMMENDED_DOCUMENTS: RAGDocument[] = [
     url: 'https://fiches.incubateur.anct.gouv.fr/fiches/globale/r%C3%A9gion/27',
     category: 'territorial',
     downloadStatus: 'pending'
+  },
+  {
+    id: 'geojson-bfc-region',
+    name: 'GeoJSON - Région BFC',
+    description: 'Données géographiques de la région Bourgogne-Franche-Comté',
+    url: '/data/bfc.geojsonl.json',
+    category: 'geojson',
+    downloadStatus: 'pending'
+  },
+  {
+    id: 'geojson-bfc-departments',
+    name: 'GeoJSON - Départements BFC',
+    description: 'Limites administratives des départements de Bourgogne-Franche-Comté',
+    url: '/data/dpt_bfc.geojsonl.json',
+    category: 'geojson',
+    downloadStatus: 'pending'
+  },
+  {
+    id: 'geojson-bfc-communes',
+    name: 'GeoJSON - Communes BFC',
+    description: 'Toutes les communes de Bourgogne-Franche-Comté avec codes INSEE',
+    url: '/data/com_bfc3.json',
+    category: 'geojson',
+    downloadStatus: 'pending'
+  },
+  {
+    id: 'geojson-bfc-epci',
+    name: 'GeoJSON - EPCI BFC',
+    description: 'Etablissements publics de coopération intercommunale de BFC',
+    url: '/data/epci.geojsonl.json',
+    category: 'geojson',
+    downloadStatus: 'pending'
+  },
+  {
+    id: 'geojson-france-departments',
+    name: 'GeoJSON - Départements France',
+    description: 'Référentiel national des départements français',
+    url: '/data/departements-france.geojson',
+    category: 'geojson',
+    downloadStatus: 'pending'
   }
 ];
 
@@ -70,21 +110,52 @@ export default function RAGSystem() {
       if (!response.ok) throw new Error('Failed to fetch document');
       
       const content = await response.text();
+      let processedContent = content;
+      let fileType = 'text/html';
+      
+      // Handle GeoJSON files specially
+      if (doc.category === 'geojson') {
+        try {
+          const geojsonData = JSON.parse(content);
+          fileType = 'application/geo+json';
+          
+          // Extract meaningful information from GeoJSON
+          const features = geojsonData.features || [geojsonData];
+          const propertiesInfo = features.slice(0, 5).map(f => f.properties);
+          
+          processedContent = `Fichier GeoJSON contenant ${features.length} entités géographiques.
+Propriétés disponibles: ${Object.keys(propertiesInfo[0] || {}).join(', ')}
+Structure type: ${geojsonData.type}
+Région: Bourgogne-Franche-Comté
+Codes de jointure disponibles: ${Object.keys(propertiesInfo[0] || {}).filter(k => k.includes('code') || k.includes('insee') || k.includes('siren')).join(', ')}`;
+        } catch (e) {
+          console.warn('Failed to parse GeoJSON:', e);
+        }
+      }
       
       // Create a processed document for RAG
       const processedDoc = {
         name: doc.name,
         description: doc.description,
         file_url: doc.url,
-        file_type: 'text/html',
+        file_type: fileType,
         file_size: content.length,
         metadata: {
           category: doc.category,
           source_url: doc.url,
           processed_at: new Date().toISOString(),
-          tags: [doc.category, 'bourgogne-franche-comte', 'geographic', 'reference']
+          tags: [doc.category, 'bourgogne-franche-comte', 'geographic', 'reference'],
+          ...(doc.category === 'geojson' && {
+            geojson: true,
+            region: 'bourgogne-franche-comte',
+            territorial_level: doc.name.includes('Communes') ? 'communes' : 
+                             doc.name.includes('Départements') ? 'departments' :
+                             doc.name.includes('EPCI') ? 'epci' : 'region'
+          })
         },
-        prompt: `Ce document contient des informations essentielles sur ${doc.description.toLowerCase()}. Utilisez ces informations pour améliorer la précision des descriptions géographiques et la génération de cartes pour la région Bourgogne-Franche-Comté.`,
+        prompt: doc.category === 'geojson' 
+          ? `Ce fichier GeoJSON contient les données géographiques officielles pour ${doc.description.toLowerCase()}. Utilisez ces structures de données exactes pour générer des cartes précises de la région Bourgogne-Franche-Comté. IMPORTANT: Limitez TOUJOURS les réponses à la région Bourgogne-Franche-Comté uniquement.`
+          : `Ce document contient des informations essentielles sur ${doc.description.toLowerCase()}. Utilisez ces informations pour améliorer la précision des descriptions géographiques et la génération de cartes pour la région Bourgogne-Franche-Comté. IMPORTANT: Limitez TOUJOURS les réponses à la région Bourgogne-Franche-Comté uniquement.`,
         is_active: true,
         embedding_processed: false
       };
@@ -148,7 +219,8 @@ export default function RAGSystem() {
       'administrative': 'bg-blue-100 text-blue-800',
       'demographic': 'bg-green-100 text-green-800',
       'geographic': 'bg-purple-100 text-purple-800',
-      'territorial': 'bg-orange-100 text-orange-800'
+      'territorial': 'bg-orange-100 text-orange-800',
+      'geojson': 'bg-pink-100 text-pink-800'
     };
     return colors[category] || 'bg-gray-100 text-gray-800';
   };
