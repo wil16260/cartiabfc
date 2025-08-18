@@ -11,17 +11,10 @@ interface FilterPanelProps {
     enabled: boolean;
     description?: string;
   }[];
-  mapTypes: {
-    id: string;
-    name: string;
-    enabled: boolean;
-    description?: string;
-  }[];
   onLayerToggle: (layerId: string, enabled: boolean) => void;
-  onMapTypeToggle: (mapTypeId: string, enabled: boolean) => void;
 }
 
-const FilterPanel = ({ layers, mapTypes, onLayerToggle, onMapTypeToggle }: FilterPanelProps) => {
+const FilterPanel = ({ layers, onLayerToggle }: FilterPanelProps) => {
   const baseLayers = layers.filter(layer => layer.id.startsWith('base_'));
   const dataLayers = layers.filter(layer => !layer.id.startsWith('base_'));
 

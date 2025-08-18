@@ -64,46 +64,19 @@ const Index = () => {
     }
   ]);
 
-  const [mapTypes, setMapTypes] = useState([
-    {
-      id: 'geocodage',
-      name: 'Géocodage',
-      enabled: false,
-      description: 'Ajouter des points sur la carte avec des éléments géolocalisés'
-    },
-    {
-      id: 'chloroplethe',
-      name: 'Choroplèthe',
-      enabled: false,
-      description: 'Joindre des données aux communes, EPCI ou départements'
-    },
-    {
-      id: 'complexe',
-      name: 'Carte complexe',
-      enabled: false,
-      description: 'Créer des cartes avancées avec plusieurs formes et couches'
-    }
-  ]);
-
   const handleSearch = async (prompt: string) => {
     setCurrentPrompt(prompt);
     setIsGenerating(true);
     setShowProgress(true);
     
     try {
-      // Get selected map type
-      const selectedMapType = mapTypes.find(type => type.enabled);
-      const mapType = selectedMapType?.id || 'choroplèthe'; // default to choroplèthe
       
-      console.log('Selected map type:', mapType);
-      
-      // Step 1: Analysis
+      // Step 1: Analysis - AI will automatically choose the best map type
       console.log('Step 1: Analyzing request...');
-      const { data: step1Data, error: step1Error } = await supabase.functions.invoke('generate-map-with-mistral', {
+      const { data: step1Data, error: step1Error } = await supabase.functions.invoke('rag-enhanced-map-generation', {
         body: { 
           prompt: prompt,
-          mapType: mapType,
-          step: 1 
+          step: 1
         }
       });
 
@@ -119,13 +92,12 @@ const Index = () => {
 
       console.log('Step 1 response:', step1Data);
       
-      // Step 2: Generate geojson based on map type
-      console.log('Step 2: Generating map data...');
-      const { data: step2Data, error: step2Error } = await supabase.functions.invoke('generate-map-with-mistral', {
+      // Step 2: Generate based on analysis - AI chooses optimal map type
+      console.log('Step 2: Generating map...');
+      const { data: step2Data, error: step2Error } = await supabase.functions.invoke('rag-enhanced-map-generation', {
         body: { 
           prompt: prompt,
-          mapType: mapType,
-          step: 2 
+          step: 2
         }
       });
 
@@ -208,21 +180,7 @@ const Index = () => {
     );
   };
 
-  const handleMapTypeToggle = (mapTypeId: string, enabled: boolean) => {
-    setMapTypes(prev => 
-      prev.map(mapType => 
-        mapType.id === mapTypeId 
-          ? { ...mapType, enabled }
-          : mapType
-      )
-    );
-  };
-
   const visibleLayers = mapLayers.filter(layer => layer.enabled).map(layer => layer.id);
-
-  // Debug logging
-  console.log('MapTypes state:', mapTypes);
-  console.log('MapLayers state:', mapLayers);
 
 
   return (
@@ -240,8 +198,6 @@ const Index = () => {
         <SearchBar 
           onSearch={handleSearch} 
           isLoading={isGenerating}
-          mapTypes={mapTypes}
-          onMapTypeToggle={handleMapTypeToggle}
         />
             <div className="flex items-center gap-3">
               <Button 
@@ -286,9 +242,7 @@ const Index = () => {
           <div className="lg:col-span-1">
             <FilterPanel 
               layers={mapLayers}
-              mapTypes={mapTypes}
               onLayerToggle={handleLayerToggle}
-              onMapTypeToggle={handleMapTypeToggle}
             />
           </div>
 

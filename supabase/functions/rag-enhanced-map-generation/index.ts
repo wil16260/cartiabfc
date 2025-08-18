@@ -26,7 +26,7 @@ serve(async (req) => {
   }
 
   try {
-    const { prompt, mapType, step = 1 } = await req.json()
+    const { prompt, step = 1 } = await req.json()
     logData.user_prompt = prompt
 
     // Get Supabase client
@@ -115,50 +115,31 @@ Répondez UNIQUEMENT avec un objet JSON :
   "ragReferences": ["documents utilisés pour l'analyse"],
   "territorialContext": "Contexte territorial BFC basé sur les références",
   "geojsonStructures": ["structures GeoJSON disponibles pour BFC"],
+  "recommendedMapType": "geocodage|choroplèthe|complexe",
+  "mapTypeReason": "Justification du choix du type de carte",
   "regionalConstraint": "bourgogne-franche-comte"
 }`
     } else {
-      // Enhanced generation with RAG
-      if (mapType === 'choroplèthe') {
-        systemPrompt += '\n\nCréez des cartes choroplèthes précises en utilisant les codes et structures des documents de référence.'
-        userPrompt = `Créez une carte choroplèthe : "${prompt}"
+      // Enhanced generation with automatic map type selection
+      systemPrompt += '\n\nCréez des cartes précises en choisissant automatiquement le type optimal (geocodage, choroplèthe, ou complexe) selon la demande et les références.'
+      
+      userPrompt = `Créez une carte pour : "${prompt}"
 
-Utilisez les documents de référence pour les codes de jointure et structures correctes.
+Utilisez les documents de référence pour choisir automatiquement le meilleur type de carte et les structures correctes.
+
+INSTRUCTIONS POUR LE CHOIX DU TYPE :
+- GEOCODAGE : Pour localiser des points spécifiques (adresses, établissements, POI)
+- CHOROPLÈTHE : Pour visualiser des données quantitatives par territoire (population, économie, etc.)
+- COMPLEXE : Pour combiner plusieurs types de données ou analyses multicritères
 
 CODES DE JOINTURE (selon documents INSEE) :
 - Communes: code_insee (format: 5 chiffres)
 - EPCI: siren_epci (format: 9 chiffres)  
 - Départements: code_departement (format: 2 chiffres)
 
-Répondez UNIQUEMENT avec un objet JSON :
-{
-  "type": "choroplèthe",
-  "dataLevel": "communes|epci|departments",
-  "joinKey": "code_insee|siren_epci|code_departement",
-  "dataProperty": "propriété_selon_références",
-  "colorScheme": "gradient|categorical",
-  "colors": ["#couleur1", "#couleur2"],
-  "title": "Titre basé sur les références",
-  "description": "Description enrichie par RAG",
-  "legend": {
-    "title": "Légende selon standards",
-    "unit": "unité de référence",
-    "categories": ["cat1", "cat2"]
-  },
-  "ragSources": ["documents utilisés"],
-  "technicalSpecs": {
-    "projection": "RGF93 / Lambert-93",
-    "format": "GeoJSON",
-    "precision": "selon IGN BD TOPO"
-  }
-}`
-      } else if (mapType === 'geocodage') {
-        systemPrompt += '\n\nGéocodez précisément en utilisant les références territoriales des documents.'
-        userPrompt = `Géocodez pour : "${prompt}"
+Répondez UNIQUEMENT avec un objet JSON selon le type choisi :
 
-Utilisez les documents de référence pour localiser précisément en BFC.
-
-Répondez UNIQUEMENT avec un objet JSON :
+POUR GEOCODAGE :
 {
   "type": "geocodage",
   "addresses": [
@@ -180,12 +161,54 @@ Répondez UNIQUEMENT avec un objet JSON :
     "color": "#couleur",
     "size": "small|medium|large",
     "symbol": "selon standards cartographiques"
-  },
-  "ragSources": ["documents utilisés"],
-  "spatialReference": "RGF93 / Lambert-93"
-}`
+  }
+}
+
+POUR CHOROPLÈTHE :
+{
+  "type": "choroplèthe",
+  "dataLevel": "communes|epci|departments",
+  "joinKey": "code_insee|siren_epci|code_departement",
+  "dataProperty": "propriété_selon_références",
+  "colorScheme": "gradient|categorical",
+  "colors": ["#couleur1", "#couleur2"],
+  "title": "Titre basé sur les références",
+  "description": "Description enrichie par RAG",
+  "legend": {
+    "title": "Légende selon standards",
+    "unit": "unité de référence",
+    "categories": ["cat1", "cat2"]
+  }
+}
+
+POUR COMPLEXE :
+{
+  "type": "complexe",
+  "layers": [
+    {
+      "name": "nom du layer",
+      "type": "choroplèthe|points|lines|polygons",
+      "dataLevel": "communes|epci|departments",
+      "style": {
+        "color": "#couleur",
+        "opacity": 0.8
       }
     }
+  ],
+  "title": "Titre de la carte complexe",
+  "description": "Description multicritères enrichie",
+  "interactions": ["hover", "click", "filter"]
+}
+
+Dans tous les cas, ajoutez :
+"ragSources": ["documents utilisés"],
+"technicalSpecs": {
+  "projection": "RGF93 / Lambert-93", 
+  "format": "GeoJSON",
+  "precision": "selon IGN BD TOPO"
+},
+"mapTypeChoice": "Justification automatique du choix"
+`
 
     logData.system_prompt = systemPrompt
 
