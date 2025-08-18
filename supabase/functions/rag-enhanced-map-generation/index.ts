@@ -209,6 +209,7 @@ Dans tous les cas, ajoutez :
 },
 "mapTypeChoice": "Justification automatique du choix"
 `
+    }
 
     logData.system_prompt = systemPrompt
 
