@@ -547,8 +547,14 @@ const AIGenerationLogs = () => {
                           ) : (
                             <Save className="h-4 w-4 mr-2" />
                           )}
-                          Enregistrer la validation
+                          {validationForm.validated === null ? 'Sélectionnez d\'abord Valider ou Invalider' : 'Enregistrer la validation'}
                         </Button>
+                        
+                        {validationForm.validated === null && (
+                          <p className="text-xs text-muted-foreground text-center">
+                            Vous devez d'abord choisir "Valider" ou "Invalider" avant d'enregistrer
+                          </p>
+                        )}
                       </div>
 
                       {selectedLog.validated_at && (
