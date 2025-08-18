@@ -9,13 +9,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Settings, Cpu, Palette, Activity, Save, LogOut, BarChart3, MapPin, Eye, EyeOff, FileText, Database } from "lucide-react";
+import { Settings, Cpu, Palette, Activity, Save, LogOut, BarChart3, MapPin, Eye, EyeOff, FileText, Database, Brain } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 import GeoJSONTemplateManager from "@/components/admin/GeoJSONTemplateManager";
 import DocumentManager from "@/components/admin/DocumentManager";
 import AIGenerationLogs from "@/components/admin/AIGenerationLogs";
+import RAGSystem from "@/components/admin/RAGSystem";
 
 const Admin = () => {
   const { user, isAdmin, loading, signOut } = useAuth();
@@ -189,6 +190,10 @@ const Admin = () => {
               <Database className="h-4 w-4" />
               Logs IA
             </TabsTrigger>
+            <TabsTrigger value="rag-system" className="gap-2">
+              <Brain className="h-4 w-4" />
+              Système RAG
+            </TabsTrigger>
             <TabsTrigger value="documents" className="gap-2">
               <FileText className="h-4 w-4" />
               Documents RAG
@@ -253,6 +258,10 @@ const Admin = () => {
 
           <TabsContent value="ai-logs" className="space-y-6">
             <AIGenerationLogs />
+          </TabsContent>
+
+          <TabsContent value="rag-system" className="space-y-6">
+            <RAGSystem />
           </TabsContent>
 
           <TabsContent value="documents" className="space-y-6">
