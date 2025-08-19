@@ -1,6 +1,37 @@
 import { useState, useEffect } from 'react'
-import { supabase, checkAdminAuth } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 import type { User } from '@supabase/supabase-js'
+
+// Cache admin status to avoid repeated database calls
+let adminCache: { userId: string; isAdmin: boolean; timestamp: number } | null = null
+const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
+
+const checkAdminAuthCached = async (userId: string) => {
+  const now = Date.now()
+  
+  // Return cached result if valid
+  if (adminCache && adminCache.userId === userId && (now - adminCache.timestamp) < CACHE_DURATION) {
+    return adminCache.isAdmin
+  }
+  
+  // Fetch from database
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('is_admin')
+    .eq('user_id', userId)
+    .single()
+  
+  const isAdmin = profile?.is_admin || false
+  
+  // Update cache
+  adminCache = {
+    userId,
+    isAdmin,
+    timestamp: now
+  }
+  
+  return isAdmin
+}
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null)
@@ -20,7 +51,7 @@ export const useAuth = () => {
         setUser(user)
         
         if (user) {
-          const adminStatus = await checkAdminAuth()
+          const adminStatus = await checkAdminAuthCached(user.id)
           if (mounted) {
             setIsAdmin(adminStatus)
           }
@@ -49,11 +80,12 @@ export const useAuth = () => {
       async (event, session) => {
         if (!mounted) return;
         
-        setUser(session?.user ?? null)
+        const newUser = session?.user ?? null
+        setUser(newUser)
         
-        if (session?.user) {
+        if (newUser) {
           try {
-            const adminStatus = await checkAdminAuth()
+            const adminStatus = await checkAdminAuthCached(newUser.id)
             if (mounted) {
               setIsAdmin(adminStatus)
             }
@@ -67,6 +99,8 @@ export const useAuth = () => {
           if (mounted) {
             setIsAdmin(false)
           }
+          // Clear cache when user logs out
+          adminCache = null
         }
         
         if (mounted) {
@@ -85,6 +119,7 @@ export const useAuth = () => {
     await supabase.auth.signOut()
     setUser(null)
     setIsAdmin(false)
+    adminCache = null // Clear cache on logout
   }
 
   return {
