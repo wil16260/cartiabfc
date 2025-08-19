@@ -168,16 +168,33 @@ const Index = () => {
           .limit(3);
 
         if (!logsError && logs && logs.length > 0) {
-          // Find the last log that contains GeoJSON geometry
+          // Find the log that contains actual geometry data with valid coordinates
           const lastLogWithGeometry = logs.find(log => {
             const response = log.ai_response as any;
-            return response && typeof response === 'object' && (
-              (response.type === 'geocodage' && response.addresses) ||
-              (response.type === 'choroplèthe' && response.dataLevel) ||
-              (response.type === 'complexe' && response.layers) ||
-              (response.geojson) ||
-              (response.addresses && Array.isArray(response.addresses))
-            );
+            if (!response || typeof response !== 'object') return false;
+            
+            // Check for geocoding with valid coordinates
+            if (response.type === 'geocodage' && Array.isArray(response.addresses)) {
+              return response.addresses.some((addr: any) => 
+                addr.latitude && addr.longitude && 
+                addr.latitude !== 0 && addr.longitude !== 0
+              );
+            }
+            
+            // Check for other geometry types
+            if (response.type === 'choroplèthe' && response.dataLevel) return true;
+            if (response.type === 'complexe' && response.layers) return true;
+            if (response.geojson) return true;
+            
+            // Check for any addresses array with valid coordinates
+            if (response.addresses && Array.isArray(response.addresses)) {
+              return response.addresses.some((addr: any) => 
+                addr.latitude && addr.longitude && 
+                addr.latitude !== 0 && addr.longitude !== 0
+              );
+            }
+            
+            return false;
           });
 
           if (lastLogWithGeometry) {
