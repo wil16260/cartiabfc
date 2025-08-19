@@ -19,9 +19,7 @@ import AIGenerationLogs from "@/components/admin/AIGenerationLogs";
 import RAGSystem from "@/components/admin/RAGSystem";
 
 const Admin = () => {
-  const { user, signOut } = useAuth();
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const { user, isAdmin, loading, signOut } = useAuth();
   const [aiConfigs, setAiConfigs] = useState<any[]>([]);
   const [selectedConfig, setSelectedConfig] = useState<any>(null);
   const [showApiKey, setShowApiKey] = useState(false);
@@ -33,44 +31,10 @@ const Admin = () => {
   ]);
 
   useEffect(() => {
-    let mounted = true;
-    
-    const checkAdminAndLoad = async () => {
-      if (!user) {
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('is_admin')
-          .eq('user_id', user.id)
-          .single();
-
-        if (mounted) {
-          const adminStatus = profile?.is_admin || false;
-          setIsAdmin(adminStatus);
-          
-          if (adminStatus) {
-            fetchAiConfigs();
-          }
-          setLoading(false);
-        }
-      } catch (error) {
-        if (mounted) {
-          setIsAdmin(false);
-          setLoading(false);
-        }
-      }
-    };
-
-    checkAdminAndLoad();
-    
-    return () => {
-      mounted = false;
+    if (isAdmin) {
+      fetchAiConfigs();
     }
-  }, [user]);
+  }, [isAdmin]);
 
   const fetchAiConfigs = async () => {
     try {

@@ -44,25 +44,6 @@ const Auth = () => {
       }
 
       if (data.user) {
-        // Check if user is admin
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('is_admin')
-          .eq('user_id', data.user.id)
-          .single()
-
-        if (!profile?.is_admin) {
-          // Sign out non-admin users immediately
-          await supabase.auth.signOut()
-          toast({
-            title: 'Accès refusé',
-            description: 'Seuls les administrateurs peuvent se connecter.',
-            variant: 'destructive'
-          })
-          setLoading(false)
-          return
-        }
-
         toast({
           title: 'Connexion réussie',
           description: 'Bienvenue, administrateur.'
