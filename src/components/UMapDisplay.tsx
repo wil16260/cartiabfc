@@ -22,6 +22,15 @@ interface UMapDisplayProps {
   isLoading?: boolean;
   visibleLayers?: string[];
   generatedMap?: any;
+  layers?: Array<{
+    id: string;
+    name: string;
+    enabled: boolean;
+    description?: string;
+    type?: 'base' | 'ai' | 'data';
+    color?: string;
+    opacity?: number;
+  }>;
 }
 
 interface MapConfig {
@@ -29,7 +38,7 @@ interface MapConfig {
   credits: string;
 }
 
-const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [], generatedMap }: UMapDisplayProps) => {
+const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [], generatedMap, layers = [] }: UMapDisplayProps) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<L.Map | null>(null);
   const [drawnItems, setDrawnItems] = useState<L.FeatureGroup | null>(null);
@@ -59,7 +68,7 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [], generatedM
     if (map && geoData) {
       renderLayers();
     }
-  }, [map, geoData, visibleLayers, aiGeneratedData, showDataVisualization]);
+  }, [map, geoData, visibleLayers, aiGeneratedData, showDataVisualization, layers]);
 
   useEffect(() => {
     if (prompt && map) {
@@ -344,6 +353,7 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [], generatedM
 
     // Render department boundaries
     if (geoData.departments && visibleLayers.includes('base_departments')) {
+      const deptLayer = layers.find(l => l.id === 'base_departments');
       L.geoJSON(geoData.departments, {
         style: (feature) => {
           // Check if we have AI data for this department
@@ -354,11 +364,11 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [], generatedM
                            ) && showDataVisualization;
           
           return {
-            color: '#f59e0b',
+            color: deptLayer?.color || '#f59e0b',
             weight: 2,
-            fillColor: hasAIData ? '#fbbf24' : 'transparent',
-            fillOpacity: hasAIData ? 0.5 : 0,
-            opacity: 0.8
+            fillColor: hasAIData ? deptLayer?.color || '#fbbf24' : 'transparent',
+            fillOpacity: hasAIData ? (deptLayer?.opacity || 0.5) : 0,
+            opacity: deptLayer?.opacity || 0.8
           };
         },
         onEachFeature: (feature, layer) => {
@@ -411,6 +421,7 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [], generatedM
 
     // Render EPCI boundaries
     if (geoData.epci && visibleLayers.includes('base_epci')) {
+      const epciLayer = layers.find(l => l.id === 'base_epci');
       L.geoJSON(geoData.epci, {
         style: (feature) => {
           const epciCode = feature?.properties?.code;
@@ -420,11 +431,11 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [], generatedM
                            ) && showDataVisualization;
           
           return {
-            color: '#8b5cf6',
+            color: epciLayer?.color || '#8b5cf6',
             weight: 1,
-            fillColor: hasAIData ? '#c4b5fd' : 'transparent',
-            fillOpacity: hasAIData ? 0.4 : 0,
-            opacity: 0.8
+            fillColor: hasAIData ? epciLayer?.color || '#c4b5fd' : 'transparent',
+            fillOpacity: hasAIData ? (epciLayer?.opacity || 0.4) : 0,
+            opacity: epciLayer?.opacity || 0.8
           };
         },
         onEachFeature: (feature, layer) => {
@@ -457,6 +468,7 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [], generatedM
 
     // Render commune boundaries
     if (geoData.communes && geoData.communes.features && visibleLayers.includes('base_communes')) {
+      const communeLayer = layers.find(l => l.id === 'base_communes');
       console.log('Rendering communes:', geoData.communes.features.length);
       L.geoJSON(geoData.communes, {
         style: (feature) => {
@@ -467,11 +479,11 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [], generatedM
                            ) && showDataVisualization;
           
           return {
-            color: '#6b7280',
+            color: communeLayer?.color || '#6b7280',
             weight: 1,
-            fillColor: hasAIData ? '#fbbf24' : 'transparent',
-            fillOpacity: hasAIData ? 0.3 : 0,
-            opacity: 1
+            fillColor: hasAIData ? communeLayer?.color || '#fbbf24' : 'transparent',
+            fillOpacity: hasAIData ? (communeLayer?.opacity || 0.3) : 0,
+            opacity: communeLayer?.opacity || 1
           };
         },
         onEachFeature: (feature, layer) => {

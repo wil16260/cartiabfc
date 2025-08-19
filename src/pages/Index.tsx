@@ -285,6 +285,7 @@ const Index = () => {
               isLoading={isGenerating}
               visibleLayers={visibleLayers}
               generatedMap={generatedMap}
+              layers={mapLayers}
             />
           </div>
         </div>
