@@ -30,6 +30,7 @@ interface UMapDisplayProps {
     type?: 'base' | 'ai' | 'data';
     color?: string;
     opacity?: number;
+    geojsonData?: any;
   }>;
 }
 

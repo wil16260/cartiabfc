@@ -200,6 +200,42 @@ export type Database = {
         }
         Relationships: []
       }
+      generated_geojson: {
+        Row: {
+          ai_prompt: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          geojson_data: Json
+          id: string
+          is_public: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          ai_prompt?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          geojson_data: Json
+          id?: string
+          is_public?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          ai_prompt?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          geojson_data?: Json
+          id?: string
+          is_public?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       geojson_templates: {
         Row: {
           created_at: string

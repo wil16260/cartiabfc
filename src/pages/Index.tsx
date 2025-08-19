@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Sparkles, Upload } from "lucide-react";
@@ -11,9 +11,11 @@ import FilterPanel from "@/components/FilterPanel";
 import ProgressBar from "@/components/ProgressBar";
 import AIAnalysisPanel from "@/components/AIAnalysisPanel";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
 const Index = () => {
+  const { user } = useAuth();
   const [currentPrompt, setCurrentPrompt] = useState("");
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [generatedMap, setGeneratedMap] = useState<any>(null);
@@ -58,6 +60,50 @@ const Index = () => {
       opacity: 0.7
     }
   ]);
+
+  // Load generated GeoJSON data from database
+  useEffect(() => {
+    const loadGeneratedGeoJSON = async () => {
+      if (!user) return;
+
+      try {
+        // Load user's generated GeoJSON data
+        const { data: generatedData, error } = await supabase
+          .from('generated_geojson')
+          .select('*')
+          .eq('created_by', user.id)
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('Error loading generated GeoJSON:', error);
+          return;
+        }
+
+        // Add generated layers to map
+        if (generatedData && generatedData.length > 0) {
+          const generatedLayers = generatedData.map((item, index) => ({
+            id: `generated_${item.id}`,
+            name: item.name,
+            enabled: false,
+            description: item.description || 'Couche générée par IA',
+            type: 'ai' as const,
+            color: `#${Math.floor(Math.random()*16777215).toString(16)}`, // Random color
+            opacity: 0.8,
+            geojsonData: item.geojson_data
+          }));
+
+          setMapLayers(prev => [
+            ...prev.filter(layer => !layer.id.startsWith('generated_')), // Remove old generated layers
+            ...generatedLayers
+          ]);
+        }
+      } catch (error) {
+        console.error('Error loading generated GeoJSON:', error);
+      }
+    };
+
+    loadGeneratedGeoJSON();
+  }, [user]);
 
   const handleSearch = async (prompt: string) => {
     setCurrentPrompt(prompt);

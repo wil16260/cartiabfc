@@ -248,13 +248,23 @@ Dans tous les cas, ajoutez :
     let mapData
     let cleanedContent = generatedContent
     
-    // Clean up markdown-wrapped JSON
+    // Clean up markdown-wrapped JSON and control characters
     if (cleanedContent.includes('```json')) {
       cleanedContent = cleanedContent.replace(/```json\s*/g, '').replace(/```\s*$/g, '')
     }
     if (cleanedContent.includes('```')) {
       cleanedContent = cleanedContent.replace(/```\s*/g, '').replace(/```\s*$/g, '')
     }
+    
+    // Remove control characters that break JSON parsing
+    cleanedContent = cleanedContent
+      .replace(/[\u0000-\u001F\u007F-\u009F]/g, '') // Remove control characters
+      .replace(/\n/g, '\\n') // Escape newlines in strings
+      .replace(/\r/g, '\\r') // Escape carriage returns
+      .replace(/\t/g, '\\t') // Escape tabs
+      .trim()
+    
+    console.log('Cleaned content:', cleanedContent)
     
     try {
       mapData = JSON.parse(cleanedContent)
@@ -266,23 +276,85 @@ Dans tous les cas, ajoutez :
       mapData.rawResponse = generatedContent // Keep original response
       
       logData.ai_response = mapData
+      
+      // Save valid GeoJSON to database if it contains geographic data
+      if (mapData.type === 'geocodage' && mapData.addresses && logData.created_by) {
+        try {
+          const geojsonFeatures = mapData.addresses.map(addr => ({
+            type: 'Feature',
+            geometry: {
+              type: 'Point',
+              coordinates: [addr.longitude, addr.latitude]
+            },
+            properties: {
+              ...addr.properties,
+              address: addr.address,
+              codeINSEE: addr.codeINSEE
+            }
+          }))
+          
+          const geojsonData = {
+            type: 'FeatureCollection',
+            features: geojsonFeatures
+          }
+          
+          // Save to generated_geojson table
+          await supabaseAdmin.from('generated_geojson').insert({
+            name: mapData.title || 'Carte générée par IA',
+            description: mapData.description,
+            geojson_data: geojsonData,
+            ai_prompt: prompt,
+            created_by: logData.created_by,
+            is_public: false
+          })
+          
+          console.log('GeoJSON saved to database')
+        } catch (saveError) {
+          console.error('Failed to save GeoJSON:', saveError)
+        }
+      }
+      
     } catch (parseError) {
       console.error('JSON parsing failed:', parseError)
+      console.error('Raw content:', generatedContent)
       console.error('Cleaned content:', cleanedContent)
       
+      // Try to extract JSON from malformed content
+      const jsonMatch = cleanedContent.match(/\{[\s\S]*\}/)
+      if (jsonMatch) {
+        try {
+          mapData = JSON.parse(jsonMatch[0])
+          console.log('Successfully parsed extracted JSON')
+          
+          // Add RAG metadata
+          mapData.ragEnhanced = true
+          mapData.documentsUsed = documents?.length || 0
+          mapData.enhancedAt = new Date().toISOString()
+          
+          logData.ai_response = mapData
+        } catch (secondError) {
+          console.error('Second parsing attempt failed:', secondError)
+          mapData = null
+        }
+      }
+      
       // Enhanced fallback with RAG context
-      mapData = {
-        title: "Carte enrichie par RAG",
-        description: `Carte générée avec contexte documentaire pour: ${prompt}`,
-        dataLevel: "communes",
-        ragEnhanced: true,
-        documentsUsed: documents?.length || 0,
-        analysis: "Analyse enrichie par les documents de référence disponibles",
-        sources: documents?.map(d => d.name) || [],
-        technicalSpecs: {
-          projection: "RGF93 / Lambert-93",
-          format: "GeoJSON",
-          region: "Bourgogne-Franche-Comté"
+      if (!mapData) {
+        mapData = {
+          title: "Carte enrichie par RAG",
+          description: `Carte générée avec contexte documentaire pour: ${prompt}`,
+          dataLevel: "communes",
+          ragEnhanced: true,
+          documentsUsed: documents?.length || 0,
+          analysis: "Analyse enrichie par les documents de référence disponibles",
+          sources: documents?.map(d => d.name) || [],
+          technicalSpecs: {
+            projection: "RGF93 / Lambert-93",
+            format: "GeoJSON",
+            region: "Bourgogne-Franche-Comté"
+          },
+          parseError: true,
+          rawContent: generatedContent
         }
       }
       
