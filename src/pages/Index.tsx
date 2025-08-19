@@ -19,48 +19,41 @@ const Index = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [showFileUpload, setShowFileUpload] = useState(false);
   const [showProgress, setShowProgress] = useState(false);
-  const [mapLayers, setMapLayers] = useState([
+  const [mapLayers, setMapLayers] = useState<Array<{
+    id: string;
+    name: string;
+    enabled: boolean;
+    description?: string;
+    type?: 'base' | 'ai' | 'data';
+    color?: string;
+    opacity?: number;
+  }>>([
     { 
       id: 'base_departments', 
       name: 'Limites départementales', 
       enabled: true, 
-      description: 'Contours des départements' 
+      description: 'Contours des départements',
+      type: 'base' as const,
+      color: '#6366f1',
+      opacity: 0.7
     },
     { 
       id: 'base_epci', 
       name: 'EPCI', 
       enabled: false, 
-      description: 'Établissements publics de coopération intercommunale' 
+      description: 'Établissements publics de coopération intercommunale',
+      type: 'base' as const,
+      color: '#8b5cf6',
+      opacity: 0.7
     },
     { 
       id: 'base_communes', 
       name: 'Communes', 
       enabled: false, 
-      description: 'Contours des communes' 
-    },
-    { 
-      id: 'base_ign', 
-      name: 'Plan IGN', 
-      enabled: false, 
-      description: 'Carte topographique IGN' 
-    },
-    { 
-      id: 'data_population', 
-      name: 'Population', 
-      enabled: false, 
-      description: 'Données de population par territoire' 
-    },
-    { 
-      id: 'data_unemployment', 
-      name: 'Taux de chômage', 
-      enabled: false, 
-      description: 'Statistiques du chômage' 
-    },
-    { 
-      id: 'data_density', 
-      name: 'Densité', 
-      enabled: false, 
-      description: 'Densité de population' 
+      description: 'Contours des communes',
+      type: 'base' as const,
+      color: '#06b6d4',
+      opacity: 0.7
     }
   ]);
 
@@ -120,6 +113,23 @@ const Index = () => {
           ...layer,
           enabled: shouldEnableLayer(layer.id, dataLevel)
         }));
+        
+        // Add AI-generated layer if new data was created
+        if (step2Data.mapData) {
+          const aiLayerId = `ai_${Date.now()}`;
+          const aiLayer = {
+            id: aiLayerId,
+            name: step2Data.title || 'Données générées par IA',
+            enabled: true,
+            description: step2Data.description || 'Couche créée automatiquement par l\'IA',
+            type: 'ai' as const,
+            color: '#ef4444',
+            opacity: 0.8
+          };
+          newLayers.push(aiLayer);
+          setGeneratedMap(step2Data.mapData);
+        }
+        
         setMapLayers(newLayers);
       }
       
@@ -178,6 +188,25 @@ const Index = () => {
           : layer
       )
     );
+  };
+
+  const handleLayerStyleChange = (layerId: string, style: { color?: string; opacity?: number }) => {
+    setMapLayers(prev => 
+      prev.map(layer => 
+        layer.id === layerId 
+          ? { ...layer, ...style }
+          : layer
+      )
+    );
+  };
+
+  const handleLayerDelete = (layerId: string) => {
+    setMapLayers(prev => prev.filter(layer => layer.id !== layerId));
+    toast.success("Couche supprimée");
+  };
+
+  const handleAddLayer = () => {
+    toast.info("Fonctionnalité d'ajout de couche à venir");
   };
 
   const visibleLayers = mapLayers.filter(layer => layer.enabled).map(layer => layer.id);
@@ -243,6 +272,9 @@ const Index = () => {
             <FilterPanel 
               layers={mapLayers}
               onLayerToggle={handleLayerToggle}
+              onLayerStyleChange={handleLayerStyleChange}
+              onLayerDelete={handleLayerDelete}
+              onAddLayer={handleAddLayer}
             />
           </div>
 
