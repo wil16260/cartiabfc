@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Sparkles, Upload } from "lucide-react";
 import SearchBar from "@/components/SearchBar";
 import FileUpload from "@/components/FileUpload";
-import DirectDataJoin from "@/components/DirectDataJoin";
+import SmartFileProcessor from "@/components/SmartFileProcessor";
 import UMapDisplay from "@/components/UMapDisplay";
 import FilterPanel from "@/components/FilterPanel";
 import ProgressBar from "@/components/ProgressBar";
@@ -218,15 +218,16 @@ const Index = () => {
     setUploadedFiles(files);
   };
 
-  const handleDirectJoinComplete = (geojsonData: any) => {
-    // Process the joined data similar to AI response
-    const updatedLayers = mapLayers.map(layer => ({
-      ...layer,
-      enabled: layer.id === 'base_departments' || layer.id === 'data_population'
-    }));
-    setMapLayers(updatedLayers);
-    setGeneratedMap(geojsonData);
-    setShowProgress(false);
+  const handleMapLayerAdd = (layerData: any) => {
+    // Add new layer to map layers
+    setMapLayers(prev => [...prev, layerData]);
+    
+    // If it's joined data, also set as generated map
+    if (layerData.type === 'joined-data') {
+      setGeneratedMap(layerData.data);
+    }
+    
+    toast.success(`Couche "${layerData.name}" ajoutée à la carte`);
   };
 
   const handleLayerToggle = (layerId: string, enabled: boolean) => {
@@ -294,9 +295,9 @@ const Index = () => {
             {showFileUpload && (
               <div className="mt-4 p-4 border rounded-lg bg-muted/50">
             <FileUpload onFilesUploaded={handleFilesUploaded} />
-            <DirectDataJoin 
+            <SmartFileProcessor 
               uploadedFiles={uploadedFiles} 
-              onJoinComplete={handleDirectJoinComplete}
+              onMapLayerAdd={handleMapLayerAdd}
             />
               </div>
             )}
