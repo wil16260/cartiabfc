@@ -97,118 +97,68 @@ Utilisez ces informations pour créer des cartes précises et contextualisées.`
     let userPrompt = ''
     
     if (step === 1) {
-      // Analysis with RAG context
-      systemPrompt += '\n\nVotre rôle est d\'analyser les demandes de cartographie en utilisant les documents de référence pour fournir des informations précises STRICTEMENT pour la région Bourgogne-Franche-Comté.'
-      userPrompt = `Analysez cette demande de carte : "${prompt}"
+      // Analysis with RAG context - CONCISE
+      systemPrompt += '\n\nAnalysez rapidement la demande et retournez seulement les informations essentielles.'
+      userPrompt = `Analysez cette demande : "${prompt}"
 
-Utilisez les documents de référence et GeoJSON pour enrichir votre analyse.
-IMPORTANT: Cette analyse doit concerner UNIQUEMENT la région Bourgogne-Franche-Comté.
-
-Répondez UNIQUEMENT avec un objet JSON :
+Répondez UNIQUEMENT avec un objet JSON CONCIS :
 {
-  "analysis": "Analyse détaillée utilisant les références documentaires BFC",
-  "searchKeywords": ["mot-clé1", "mot-clé2", "mot-clé3"],
   "dataLevel": "communes|epci|departments",
-  "title": "Titre précis basé sur les références BFC",
-  "description": "Description enrichie par les documents BFC",
-  "sources": ["sources des documents de référence"],
-  "ragReferences": ["documents utilisés pour l'analyse"],
-  "territorialContext": "Contexte territorial BFC basé sur les références",
-  "geojsonStructures": ["structures GeoJSON disponibles pour BFC"],
-  "recommendedMapType": "geocodage|choroplèthe|complexe",
-  "mapTypeReason": "Justification du choix du type de carte",
-  "regionalConstraint": "bourgogne-franche-comte"
+  "title": "Titre court",
+  "recommendedMapType": "geocodage|choroplèthe|complexe"
 }`
     } else {
-      // Enhanced generation with automatic map type selection
-      systemPrompt += '\n\nCréez des cartes précises en choisissant automatiquement le type optimal (geocodage, choroplèthe, ou complexe) selon la demande et les références.'
+      // Generate CONCISE mapping data only
+      systemPrompt += '\n\nCréez UNIQUEMENT les données géographiques essentielles pour la carte.'
       
       userPrompt = `Créez une carte pour : "${prompt}"
 
-Utilisez les documents de référence pour choisir automatiquement le meilleur type de carte et les structures correctes.
-
-INSTRUCTIONS POUR LE CHOIX DU TYPE :
-- GEOCODAGE : Pour localiser des points spécifiques (adresses, établissements, POI)
-- CHOROPLÈTHE : Pour visualiser des données quantitatives par territoire (population, économie, etc.)
-- COMPLEXE : Pour combiner plusieurs types de données ou analyses multicritères
-
-CODES DE JOINTURE (selon documents INSEE) :
-- Communes: code_insee (format: 5 chiffres)
-- EPCI: siren_epci (format: 9 chiffres)  
-- Départements: code_departement (format: 2 chiffres)
-
-Répondez UNIQUEMENT avec un objet JSON selon le type choisi :
+Répondez UNIQUEMENT avec un objet JSON CONCIS selon le type :
 
 POUR GEOCODAGE :
 {
   "type": "geocodage",
   "addresses": [
     {
-      "address": "adresse complète selon références",
+      "address": "adresse complète",
       "latitude": 47.123,
       "longitude": 5.456,
-      "codeINSEE": "code commune selon COG",
+      "codeINSEE": "code commune",
       "properties": {
         "name": "nom du lieu",
-        "category": "catégorie selon références",
-        "source": "document de référence utilisé"
+        "code": "code identifiant",
+        "color": "#ef4444"
       }
     }
   ],
-  "title": "Titre géographiquement précis",
-  "description": "Description enrichie par RAG",
-  "markerStyle": {
-    "color": "#couleur",
-    "size": "small|medium|large",
-    "symbol": "selon standards cartographiques"
-  }
+  "title": "Titre court",
+  "dataLevel": "communes"
 }
 
 POUR CHOROPLÈTHE :
 {
-  "type": "choroplèthe",
+  "type": "choroplèthe", 
   "dataLevel": "communes|epci|departments",
-  "joinKey": "code_insee|siren_epci|code_departement",
-  "dataProperty": "propriété_selon_références",
-  "colorScheme": "gradient|categorical",
-  "colors": ["#couleur1", "#couleur2"],
-  "title": "Titre basé sur les références",
-  "description": "Description enrichie par RAG",
-  "legend": {
-    "title": "Légende selon standards",
-    "unit": "unité de référence",
-    "categories": ["cat1", "cat2"]
-  }
+  "title": "Titre court",
+  "colors": ["#ef4444", "#22c55e"],
+  "joinKey": "code_insee"
 }
 
 POUR COMPLEXE :
 {
   "type": "complexe",
+  "title": "Titre court", 
+  "dataLevel": "communes",
   "layers": [
     {
-      "name": "nom du layer",
-      "type": "choroplèthe|points|lines|polygons",
-      "dataLevel": "communes|epci|departments",
-      "style": {
-        "color": "#couleur",
-        "opacity": 0.8
-      }
+      "name": "nom court",
+      "type": "points",
+      "color": "#ef4444"
     }
-  ],
-  "title": "Titre de la carte complexe",
-  "description": "Description multicritères enrichie",
-  "interactions": ["hover", "click", "filter"]
+  ]
 }
 
-Dans tous les cas, ajoutez :
-"ragSources": ["documents utilisés"],
-"technicalSpecs": {
-  "projection": "RGF93 / Lambert-93", 
-  "format": "GeoJSON",
-  "precision": "selon IGN BD TOPO"
-},
-"mapTypeChoice": "Justification automatique du choix"
-`
+IMPORTANT: Réponse TRÈS COURTE, données géographiques ESSENTIELLES seulement !`
     }
 
     logData.system_prompt = systemPrompt
@@ -231,8 +181,8 @@ Dans tous les cas, ajoutez :
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
         ],
-        temperature: 0.2,
-        max_tokens: 3000
+        temperature: 0.1,
+        max_tokens: 800
       }),
     })
 
