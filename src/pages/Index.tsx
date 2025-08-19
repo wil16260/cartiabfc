@@ -9,6 +9,7 @@ import DirectDataJoin from "@/components/DirectDataJoin";
 import UMapDisplay from "@/components/UMapDisplay";
 import FilterPanel from "@/components/FilterPanel";
 import ProgressBar from "@/components/ProgressBar";
+import AIAnalysisPanel from "@/components/AIAnalysisPanel";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 
@@ -19,6 +20,7 @@ const Index = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [showFileUpload, setShowFileUpload] = useState(false);
   const [showProgress, setShowProgress] = useState(false);
+  const [showAIAnalysis, setShowAIAnalysis] = useState(false);
   const [mapLayers, setMapLayers] = useState<Array<{
     id: string;
     name: string;
@@ -133,6 +135,7 @@ const Index = () => {
         setMapLayers(newLayers);
       }
       
+      setShowAIAnalysis(true);
       toast.success("Carte générée avec succès!");
       
     } catch (error) {
@@ -266,7 +269,7 @@ const Index = () => {
         )}
 
         {/* Main Interface */}
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-6 gap-6">
           {/* Left Column - Layers */}
           <div className="lg:col-span-1">
             <FilterPanel 
@@ -278,14 +281,22 @@ const Index = () => {
             />
           </div>
 
-          {/* Right Column - Map */}
-          <div className="lg:col-span-4">
+          {/* Center Column - Map */}
+          <div className="lg:col-span-3">
             <UMapDisplay 
               prompt={currentPrompt} 
               isLoading={isGenerating}
               visibleLayers={visibleLayers}
               generatedMap={generatedMap}
               layers={mapLayers}
+            />
+          </div>
+
+          {/* Right Column - AI Analysis */}
+          <div className="lg:col-span-2">
+            <AIAnalysisPanel 
+              generatedMap={generatedMap}
+              isVisible={showAIAnalysis}
             />
           </div>
         </div>

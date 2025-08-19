@@ -246,17 +246,29 @@ Dans tous les cas, ajoutez :
 
     // 6. Parse and enhance response
     let mapData
+    let cleanedContent = generatedContent
+    
+    // Clean up markdown-wrapped JSON
+    if (cleanedContent.includes('```json')) {
+      cleanedContent = cleanedContent.replace(/```json\s*/g, '').replace(/```\s*$/g, '')
+    }
+    if (cleanedContent.includes('```')) {
+      cleanedContent = cleanedContent.replace(/```\s*/g, '').replace(/```\s*$/g, '')
+    }
+    
     try {
-      mapData = JSON.parse(generatedContent)
+      mapData = JSON.parse(cleanedContent)
       
       // Add RAG metadata
       mapData.ragEnhanced = true
       mapData.documentsUsed = documents?.length || 0
       mapData.enhancedAt = new Date().toISOString()
+      mapData.rawResponse = generatedContent // Keep original response
       
       logData.ai_response = mapData
     } catch (parseError) {
       console.error('JSON parsing failed:', parseError)
+      console.error('Cleaned content:', cleanedContent)
       
       // Enhanced fallback with RAG context
       mapData = {

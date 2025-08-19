@@ -514,40 +514,79 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [], generatedM
       }).addTo(map);
     }
 
-    // Render AI-generated point data (geocoding)
-    if (aiGeneratedData && aiGeneratedData.features) {
-      console.log('Rendering AI-generated point data:', aiGeneratedData.features);
+    // Render AI-generated data
+    if (generatedMap && generatedMap.features) {
+      console.log('Rendering AI-generated GeoJSON data:', generatedMap.features);
       
-      L.geoJSON(aiGeneratedData, {
+      // Find the AI layer configuration
+      const aiLayer = layers.find(l => l.type === 'ai' && l.enabled);
+      const layerColor = aiLayer?.color || '#ef4444';
+      const layerOpacity = aiLayer?.opacity || 0.8;
+      
+      L.geoJSON(generatedMap, {
+        style: (feature) => {
+          // Style for polygon/line features
+          return {
+            color: layerColor,
+            weight: 2,
+            fillColor: layerColor,
+            fillOpacity: layerOpacity * 0.6,
+            opacity: layerOpacity
+          };
+        },
         pointToLayer: (feature, latlng) => {
+          // Style for point features
           const icon = L.divIcon({
-            html: `<div style="background-color: #e11d48; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
-            className: 'custom-marker',
-            iconSize: [16, 16],
-            iconAnchor: [8, 8]
+            html: `<div style="background-color: ${layerColor}; width: 14px; height: 14px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3); opacity: ${layerOpacity};"></div>`,
+            className: 'custom-ai-marker',
+            iconSize: [18, 18],
+            iconAnchor: [9, 9]
           });
           
           return L.marker(latlng, { icon });
         },
         onEachFeature: (feature, layer) => {
           const properties = feature.properties || {};
-          const name = properties.name || properties.nom || properties.title || 'Point généré par IA';
+          const name = properties.name || properties.nom || properties.title || generatedMap.title || 'Données générées par IA';
+          const description = properties.description || generatedMap.description || '';
           
-          let popupContent = `<div class="p-2">
-            <h3 class="font-semibold text-sm">${name}</h3>`;
+          let popupContent = `
+            <div class="p-3 min-w-[200px]">
+              <h3 class="font-bold text-base text-primary mb-2">${name}</h3>
+              ${description ? `<p class="text-sm text-muted-foreground mb-3">${description}</p>` : ''}
+              <div class="space-y-1">
+          `;
           
+          // Add other properties
           Object.keys(properties).forEach(key => {
-            if (key !== 'name' && key !== 'nom' && key !== 'title' && key !== 'icon') {
-              popupContent += `<p class="text-xs text-gray-600">${key}: ${properties[key]}</p>`;
+            if (!['name', 'nom', 'title', 'description', 'icon'].includes(key)) {
+              const value = properties[key];
+              if (value !== null && value !== undefined && value !== '') {
+                popupContent += `<div class="flex justify-between text-xs">
+                  <span class="font-medium">${key}:</span>
+                  <span class="text-muted-foreground">${value}</span>
+                </div>`;
+              }
             }
           });
           
-          popupContent += '</div>';
-          layer.bindPopup(popupContent);
+          popupContent += '</div></div>';
+          
+          layer.bindPopup(popupContent, {
+            maxWidth: 300,
+            className: 'ai-generated-popup'
+          });
+          
+          // Also bind tooltip for quick preview
+          layer.bindTooltip(`<strong>${name}</strong>`, {
+            permanent: false,
+            direction: 'top',
+            className: 'ai-tooltip'
+          });
         }
       }).addTo(map);
       
-      toast.success("Données IA ajoutées à la carte!");
+      console.log('AI data successfully added to map');
     }
   };
 
