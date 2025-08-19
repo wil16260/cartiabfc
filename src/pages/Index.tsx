@@ -153,8 +153,86 @@ const Index = () => {
       }
 
       console.log('Step 2 response:', step2Data);
+
+      // Step 3: Get the last log with GeoJSON geometry for map generation
+      console.log('Step 3: Fetching last GeoJSON log...');
       
-      // Update map layers based on AI response
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: logs, error: logsError } = await supabase
+          .from('ai_generation_logs')
+          .select('*')
+          .eq('created_by', user.id)
+          .not('ai_response', 'is', null)
+          .order('created_at', { ascending: false })
+          .limit(3);
+
+        if (!logsError && logs && logs.length > 0) {
+          // Find the last log that contains GeoJSON geometry
+          const lastLogWithGeometry = logs.find(log => {
+            const response = log.ai_response as any;
+            return response && typeof response === 'object' && (
+              (response.type === 'geocodage' && response.addresses) ||
+              (response.type === 'choroplèthe' && response.dataLevel) ||
+              (response.type === 'complexe' && response.layers) ||
+              (response.geojson) ||
+              (response.addresses && Array.isArray(response.addresses))
+            );
+          });
+
+          if (lastLogWithGeometry) {
+            console.log('Found log with geometry:', lastLogWithGeometry);
+            const geometryData = lastLogWithGeometry.ai_response as any;
+            
+            // Convert AI response to map layer if it contains geometric data
+            if (geometryData && typeof geometryData === 'object' && 
+                geometryData.type === 'geocodage' && 
+                Array.isArray(geometryData.addresses)) {
+              
+              const geojsonFeatures = geometryData.addresses.map((addr: any) => ({
+                type: 'Feature',
+                geometry: {
+                  type: 'Point',
+                  coordinates: [addr.longitude, addr.latitude]
+                },
+                properties: {
+                  ...(addr.properties || {}),
+                  address: addr.address,
+                  codeINSEE: addr.codeINSEE
+                }
+              }));
+              
+              const geojsonData = {
+                type: 'FeatureCollection',
+                features: geojsonFeatures
+              };
+
+              const aiLayerId = `ai_${Date.now()}`;
+              const aiLayer = {
+                id: aiLayerId,
+                name: geometryData.title || 'Données géolocalisées',
+                enabled: true,
+                data: geojsonData,
+                visible: true,
+                type: 'ai' as const,
+                style: {
+                  color: '#ef4444',
+                  fillColor: '#ef4444',
+                  fillOpacity: 0.6,
+                  weight: 2
+                }
+              };
+              
+              setMapLayers(prev => [...prev, aiLayer]);
+              setGeneratedMap({ ...geometryData, geojson: geojsonData });
+              
+              console.log('Added geocoded points to map:', geojsonFeatures.length, 'features');
+            }
+          }
+        }
+      }
+      
+      // Update base map layers based on AI response
       if (step1Data.dataLevel || step2Data.dataLevel) {
         const dataLevel = step1Data.dataLevel || step2Data.dataLevel;
         const newLayers = mapLayers.map(layer => ({
@@ -162,23 +240,10 @@ const Index = () => {
           enabled: shouldEnableLayer(layer.id, dataLevel)
         }));
         
-        // Add AI-generated layer if new data was created
-        if (step2Data.mapData) {
-          const aiLayerId = `ai_${Date.now()}`;
-          const aiLayer = {
-            id: aiLayerId,
-            name: step2Data.title || 'Données générées par IA',
-            enabled: true,
-            description: step2Data.description || 'Couche créée automatiquement par l\'IA',
-            type: 'ai' as const,
-            color: '#ef4444',
-            opacity: 0.8
-          };
-          newLayers.push(aiLayer);
-          setGeneratedMap(step2Data.mapData);
-        }
-        
-        setMapLayers(newLayers);
+        setMapLayers(prev => [
+          ...newLayers.filter(l => l.type !== 'ai'),
+          ...prev.filter(l => l.type === 'ai')
+        ]);
       }
       
       setShowAIAnalysis(true);
