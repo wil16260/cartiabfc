@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "13.0.4"
@@ -277,11 +277,11 @@ export type Database = {
       get_active_ai_config: {
         Args: Record<PropertyKey, never>
         Returns: {
-          id: string
-          model_name: string
-          has_api_key: boolean
-          is_active: boolean
           created_at: string
+          has_api_key: boolean
+          id: string
+          is_active: boolean
+          model_name: string
         }[]
       }
       is_admin: {
