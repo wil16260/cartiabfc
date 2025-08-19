@@ -1,10 +1,15 @@
 
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Settings, Map } from "lucide-react";
+import { Settings, Map, LogOut } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 const Header = () => {
   const location = useLocation();
+  const { user, signOut } = useAuth();
+
+  console.log('🏠 Header - User:', user?.id);
+  console.log('🏠 Header - Current location:', location.pathname);
 
   return (
     <header className="border-b bg-background/80 backdrop-blur-sm sticky top-0 z-50">
@@ -33,16 +38,39 @@ const Header = () => {
                 Accueil
               </Button>
             </Link>
-            <Link to="/admin">
-              <Button 
-                variant={location.pathname === "/admin" ? "default" : "ghost"}
-                size="sm"
-                className="gap-2"
-              >
-                <Settings className="h-4 w-4" />
-                Administration
-              </Button>
-            </Link>
+            
+            {!user ? (
+              <Link to="/auth">
+                <Button 
+                  variant={location.pathname === "/auth" ? "default" : "ghost"}
+                  size="sm"
+                >
+                  Connexion
+                </Button>
+              </Link>
+            ) : (
+              <>
+                <Link to="/admin">
+                  <Button 
+                    variant={location.pathname === "/admin" ? "default" : "ghost"}
+                    size="sm"
+                    className="gap-2"
+                  >
+                    <Settings className="h-4 w-4" />
+                    Administration
+                  </Button>
+                </Link>
+                <Button 
+                  variant="ghost"
+                  size="sm"
+                  onClick={signOut}
+                  className="gap-2"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Déconnexion
+                </Button>
+              </>
+            )}
           </nav>
         </div>
       </div>
