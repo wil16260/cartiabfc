@@ -8,8 +8,6 @@ const Header = () => {
   const location = useLocation();
   const { user, signOut } = useAuth();
 
-  console.log('🏠 Header - User:', user?.id);
-  console.log('🏠 Header - Current location:', location.pathname);
 
   return (
     <header className="border-b bg-background/80 backdrop-blur-sm sticky top-0 z-50">

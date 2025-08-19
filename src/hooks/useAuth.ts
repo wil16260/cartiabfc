@@ -6,38 +6,24 @@ import type { User } from '@supabase/supabase-js'
 let adminCache: { userId: string; isAdmin: boolean; timestamp: number } | null = null
 const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
 
-// Debug function to check admin status
-const debugAdminCheck = async (userId: string) => {
-  console.log('🔍 Checking admin status for user:', userId)
-  const { data: profile, error } = await supabase
-    .from('profiles')
-    .select('is_admin')
-    .eq('user_id', userId)
-    .single()
-  
-  console.log('📊 Profile data:', profile)
-  console.log('❌ Profile error:', error)
-  return profile?.is_admin || false
-}
-
 const checkAdminAuthCached = async (userId: string) => {
   const now = Date.now()
   
-  // Force fresh check for debugging - clear cache temporarily
-  adminCache = null
+  // Check cache first
+  if (adminCache && 
+      adminCache.userId === userId && 
+      now - adminCache.timestamp < CACHE_DURATION) {
+    return adminCache.isAdmin
+  }
   
-  // Fetch from database with debug logging
-  console.log('🔍 Fetching admin status for user:', userId)
-  const { data: profile, error } = await supabase
+  // Fetch from database
+  const { data: profile } = await supabase
     .from('profiles')
     .select('is_admin')
     .eq('user_id', userId)
     .single()
   
-  console.log('📊 Admin check result:', { profile, error })
-  
   const isAdmin = profile?.is_admin || false
-  console.log('✅ Final admin status:', isAdmin)
   
   // Update cache
   adminCache = {
