@@ -61,9 +61,27 @@ const SmartFileProcessor = ({ uploadedFiles, onMapLayerAdd }: SmartFileProcessor
           features: []
         };
       } else if (file.name.toLowerCase().endsWith('.gpkg')) {
-        // GPKG files would need special handling with a library like sql.js
-        toast.info('GPKG files need special processing');
-        return;
+        // Process GPKG file using dedicated edge function
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const { data, error } = await supabase.functions.invoke('process-gpkg', {
+          body: formData
+        });
+
+        if (error) throw error;
+        
+        if (data.processed) {
+          geojsonData = data.geojson;
+        } else {
+          // Show instructions for GPKG conversion
+          toast.error('GPKG processing not fully implemented', {
+            description: 'Please convert to GeoJSON first using GDAL or QGIS',
+            duration: 8000,
+          });
+          console.log('GPKG processing instructions:', data);
+          return;
+        }
       }
 
       if (geojsonData) {
