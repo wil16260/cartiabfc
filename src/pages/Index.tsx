@@ -315,9 +315,9 @@ const Index = () => {
         )}
 
         {/* Main Interface */}
-        <div className="grid grid-cols-1 lg:grid-cols-6 gap-6">
-          {/* Left Column - Layers */}
-          <div className="lg:col-span-1">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column - Controls */}
+          <div className="lg:col-span-1 space-y-6">
             <FilterPanel 
               layers={mapLayers}
               onLayerToggle={handleLayerToggle}
@@ -325,24 +325,20 @@ const Index = () => {
               onLayerDelete={handleLayerDelete}
               onAddLayer={handleAddLayer}
             />
+            <AIAnalysisPanel 
+              generatedMap={generatedMap}
+              isVisible={showAIAnalysis}
+            />
           </div>
 
-          {/* Center Column - Map */}
-          <div className="lg:col-span-3">
+          {/* Right Column - Map */}
+          <div className="lg:col-span-2">
             <UMapDisplay 
               prompt={currentPrompt} 
               isLoading={isGenerating}
               visibleLayers={visibleLayers}
               generatedMap={generatedMap}
               layers={mapLayers}
-            />
-          </div>
-
-          {/* Right Column - AI Analysis */}
-          <div className="lg:col-span-2">
-            <AIAnalysisPanel 
-              generatedMap={generatedMap}
-              isVisible={showAIAnalysis}
             />
           </div>
         </div>
