@@ -18,6 +18,8 @@ const AIMap = () => {
   const [currentPrompt, setCurrentPrompt] = useState("");
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [generatedMap, setGeneratedMap] = useState<any>(null);
+  const [generatedMapData, setGeneratedMapData] = useState<any>(null);
+  const [generatedMaps, setGeneratedMaps] = useState<any[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showFileUpload, setShowFileUpload] = useState(false);
   const [showProgress, setShowProgress] = useState(false);
@@ -122,95 +124,34 @@ const AIMap = () => {
 
       console.log('Map generation response:', generateResponse.data);
 
-      // Fetch the latest AI generation logs to find one with valid geometry
-      const { data: logs, error: logsError } = await supabase
-        .from('ai_generation_logs')
-        .select('*')
-        .eq('user_prompt', prompt)
-        .order('created_at', { ascending: false })
-        .limit(5);
-
-      if (logsError) {
-        console.error('Error fetching logs:', logsError);
-        throw new Error('Failed to fetch generation logs');
-      }
-
-      // Find the log with valid geometry or coordinates
-      const logWithGeometry = logs?.find(log => {
-        if (!log.ai_response) return false;
+      // Check if response contains GeoJSON data directly
+      if (generateResponse.data && generateResponse.data.type === 'FeatureCollection') {
+        const geojsonData = generateResponse.data;
+        console.log('Generated GeoJSON with', geojsonData.features?.length || 0, 'features');
         
-        const response = typeof log.ai_response === 'string' 
-          ? JSON.parse(log.ai_response) 
-          : log.ai_response;
-        
-        // Check if there are layers with valid coordinates
-        if (response.layers && Array.isArray(response.layers)) {
-          return response.layers.some((layer: any) => 
-            layer.data && Array.isArray(layer.data) && 
-            layer.data.some((item: any) => 
-              item.coordinates && 
-              Array.isArray(item.coordinates) && 
-              item.coordinates.length >= 2 &&
-              item.coordinates[0] !== 0 && 
-              item.coordinates[1] !== 0
-            )
-          );
-        }
-        
-        return false;
-      });
-
-      if (logWithGeometry) {
-        const aiResponse = typeof logWithGeometry.ai_response === 'string' 
-          ? JSON.parse(logWithGeometry.ai_response) 
-          : logWithGeometry.ai_response;
-
-        // Save the AI-generated data to the data folder
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        const filename = `ai-generated-${timestamp}.json`;
-        
-        // Save to Supabase generated_geojson table (only if user is authenticated)
-        if (user) {
-          const { data: savedData, error: saveError } = await supabase
-            .from('generated_geojson')
-            .insert({
-              name: aiResponse.title || `AI Generated Map - ${timestamp}`,
-              description: `Generated from prompt: "${prompt}"`,
-              geojson_data: aiResponse,
-              ai_prompt: prompt,
-              created_by: user.id
-            })
-            .select()
-            .single();
-
-          if (saveError) {
-            console.error('Error saving AI data:', saveError);
-          }
-        }
-
-        
-        // Add the AI-generated layer to the map
-        if (aiResponse.layers && Array.isArray(aiResponse.layers)) {
-          const newLayers = aiResponse.layers.map((layer: any, index: number) => ({
-            id: `ai_${Date.now()}_${index}`,
-            name: layer.name || `AI Layer ${index + 1}`,
-            enabled: true,
-            description: `AI generated: ${layer.name}`,
-            type: 'ai' as const,
-            color: layer.color || '#ff6b6b',
-            opacity: 0.8,
-            data: layer.data
-          }));
-
-          setMapLayers(prev => [...prev, ...newLayers]);
-        }
-
-        setGeneratedMap(aiResponse);
-        setShowAIAnalysis(true);
-        
-        toast.success("Carte générée avec succès !");
+        setGeneratedMapData(geojsonData);
+        toast.success(`Carte générée avec succès! ${geojsonData.features?.length || 0} éléments créés`);
       } else {
-        toast.error("Aucune donnée géographique valide trouvée dans la réponse IA");
+        // Fetch the latest generated GeoJSON from the database
+        const { data: generatedMaps, error: mapsError } = await supabase
+          .from('generated_geojson')
+          .select('*')
+          .eq('ai_prompt', prompt)
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (mapsError) {
+          console.error('Error fetching generated maps:', mapsError);
+        } else if (generatedMaps && generatedMaps.length > 0) {
+          const latestMap = generatedMaps[0];
+          console.log('Found generated map:', latestMap);
+          
+          setGeneratedMaps(prev => [latestMap, ...prev.filter(m => m.id !== latestMap.id)]);
+          setGeneratedMapData(latestMap.geojson_data);
+          toast.success(`Carte générée avec succès! ${(latestMap.geojson_data as any)?.features?.length || 0} éléments trouvés`);
+        } else {
+          toast.error("Aucune géométrie trouvée - L'IA n'a pas généré de données géographiques valides");
+        }
       }
 
     } catch (error) {
@@ -413,7 +354,7 @@ const AIMap = () => {
               <CardContent className="p-0 h-full">
                 <UMapDisplay 
                   layers={mapLayers}
-                  generatedMap={generatedMap}
+          generatedMap={generatedMapData || generatedMap}
                 />
               </CardContent>
             </Card>

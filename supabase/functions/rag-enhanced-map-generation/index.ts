@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -7,64 +7,54 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
-  }
-
-  const startTime = Date.now()
-  let logData = {
-    user_prompt: '',
-    ai_response: null,
-    raw_ai_response: '',
-    success: false,
-    error_message: null,
-    model_name: 'rag-enhanced',
-    system_prompt: null,
-    execution_time_ms: null,
-    created_by: null
+    return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    const { prompt, step = 1 } = await req.json()
-    logData.user_prompt = prompt
-
-    // Get Supabase client
+    const { prompt, step, dataLevel, recommendedMapType } = await req.json()
+    
+    // Initialize Supabase clients
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
+    
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: { persistSession: false }
+    })
+    
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: { persistSession: false }
+    })
 
-    // Get user info
-    const authHeader = req.headers.get('authorization')
-    if (authHeader) {
-      const supabaseAnon = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!)
-      const { data: { user } } = await supabaseAnon.auth.getUser(authHeader.replace('Bearer ', ''))
-      if (user) {
-        logData.created_by = user.id
-      }
+    // Initialize log data
+    const logData: any = {
+      user_prompt: prompt,
+      step: step || 1,
+      status: 'processing',
+      created_at: new Date().toISOString()
     }
 
-    // 1. Get relevant documents from RAG system
     console.log('Fetching relevant documents...')
-    const { data: documents, error: docsError } = await supabaseAdmin
+    
+    // 1. Fetch relevant documents from RAG system
+    const { data: documents, error: docError } = await supabaseAdmin
       .from('documents')
-      .select('name, description, prompt, metadata')
-      .eq('is_active', true)
-      .eq('embedding_processed', true)
+      .select('*')
+      .eq('status', 'active')
+      .eq('is_processed', true)
+      .limit(5)
 
-    if (docsError) {
-      console.error('Error fetching documents:', docsError)
+    if (docError) {
+      console.error('Error fetching documents:', docError)
     }
 
-    // 2. Build enhanced context from documents
+    // 2. Build RAG context
     let ragContext = ''
     if (documents && documents.length > 0) {
-      ragContext = documents.map(doc => `
-Document: ${doc.name}
-Description: ${doc.description}
-Context: ${doc.prompt}
-Tags: ${doc.metadata?.tags?.join(', ') || 'N/A'}
----`).join('\n')
+      ragContext = `DOCUMENTS DISPONIBLES:\n${documents.map(doc => 
+        `- ${doc.name}: ${doc.description || 'Document géographique'}\n  Contenu: ${(doc.content || '').substring(0, 500)}...`
+      ).join('\n')}\n\n`
     }
 
     // 3. Get AI configuration
@@ -72,94 +62,55 @@ Tags: ${doc.metadata?.tags?.join(', ') || 'N/A'}
       .from('ai_config')
       .select('*')
       .eq('is_active', true)
-      .order('created_at', { ascending: false })
-      .limit(1)
       .single()
 
     if (configError || !aiConfig) {
       throw new Error('No active AI configuration found')
     }
 
-    // 4. Build enhanced prompts with RAG context
-    let systemPrompt = `Vous êtes un expert géospatial spécialisé EXCLUSIVEMENT dans la région Bourgogne-Franche-Comté.
-Vous avez accès aux documents de référence et fichiers GeoJSON suivants :
+    // 4. Build enhanced prompt with RAG context
+    const systemPrompt = `Tu es un expert en cartographie et données géographiques de la région Bourgogne-Franche-Comté.
+Tu utilises les documents fournis pour créer des cartes GeoJSON précises.
 
-${ragContext}
+${ragContext ? `CONTEXTE DISPONIBLE: ${ragContext}` : ''}
 
-RÈGLES IMPÉRATIVES :
-- Limitez TOUJOURS vos réponses à la région Bourgogne-Franche-Comté UNIQUEMENT
-- Utilisez UNIQUEMENT les codes INSEE, SIREN et structures des documents de référence
-- Pour les GeoJSON, respectez exactement les structures de propriétés disponibles
-- Ne proposez JAMAIS de données en dehors de la région BFC
+Instructions:
+- Utilise uniquement les données factuelles des documents fournis
+- Génère des coordonnées GPS réelles pour la région BFC (latitude 46-48°N, longitude 3-7°E)
+- Format de réponse: GeoJSON FeatureCollection valide uniquement
+- Sois précis et concis
 
-Utilisez ces informations pour créer des cartes précises et contextualisées.`
-
-    let userPrompt = ''
-    
-    if (step === 1) {
-      // Analysis with RAG context - CONCISE
-      systemPrompt += '\n\nAnalysez rapidement la demande et retournez seulement les informations essentielles.'
-      userPrompt = `Analysez cette demande : "${prompt}"
-
-Répondez UNIQUEMENT avec un objet JSON CONCIS :
+Format de réponse GeoJSON strict:
 {
-  "dataLevel": "communes|epci|departments",
-  "title": "Titre court",
-  "recommendedMapType": "geocodage|choroplèthe|complexe"
-}`
-    } else {
-      // Generate CONCISE mapping data only
-      systemPrompt += '\n\nCréez UNIQUEMENT les données géographiques essentielles pour la carte.'
-      
-      userPrompt = `Créez une carte pour : "${prompt}"
-
-Répondez UNIQUEMENT avec un objet JSON CONCIS selon le type :
-
-POUR GEOCODAGE :
-{
-  "type": "geocodage",
-  "addresses": [
+  "type": "FeatureCollection",
+  "title": "Titre de la carte",
+  "description": "Description courte",
+  "features": [
     {
-      "address": "adresse complète",
-      "latitude": 47.123,
-      "longitude": 5.456,
-      "codeINSEE": "code commune",
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [longitude, latitude]
+      },
       "properties": {
-        "name": "nom du lieu",
-        "code": "code identifiant",
-        "color": "#ef4444"
+        "name": "Nom du lieu",
+        "description": "Description",
+        "category": "Type"
       }
-    }
-  ],
-  "title": "Titre court",
-  "dataLevel": "communes"
-}
-
-POUR CHOROPLÈTHE :
-{
-  "type": "choroplèthe", 
-  "dataLevel": "communes|epci|departments",
-  "title": "Titre court",
-  "colors": ["#ef4444", "#22c55e"],
-  "joinKey": "code_insee"
-}
-
-POUR COMPLEXE :
-{
-  "type": "complexe",
-  "title": "Titre court", 
-  "dataLevel": "communes",
-  "layers": [
-    {
-      "name": "nom court",
-      "type": "points",
-      "color": "#ef4444"
     }
   ]
 }
 
-IMPORTANT: Réponse TRÈS COURTE, données géographiques ESSENTIELLES seulement !`
-    }
+IMPORTANT: Génère des coordonnées GPS réelles pour la région Bourgogne-Franche-Comté !`
+
+    const userPrompt = `${ragContext}
+
+Créer une carte de: ${prompt}
+${step ? `Étape: ${step}` : ''}
+${dataLevel ? `Niveau géographique: ${dataLevel}` : ''}
+${recommendedMapType ? `Type de carte recommandé: ${recommendedMapType}` : ''}
+
+Format de réponse GeoJSON strict avec coordonnées réelles de Bourgogne-Franche-Comté.`
 
     logData.system_prompt = systemPrompt
 
@@ -182,7 +133,7 @@ IMPORTANT: Réponse TRÈS COURTE, données géographiques ESSENTIELLES seulement
           { role: 'user', content: userPrompt }
         ],
         temperature: 0.1,
-        max_tokens: 800
+        max_tokens: 1000
       }),
     })
 
@@ -228,37 +179,18 @@ IMPORTANT: Réponse TRÈS COURTE, données géographiques ESSENTIELLES seulement
       logData.ai_response = mapData
       
       // Save valid GeoJSON to database if it contains geographic data
-      if (mapData.type === 'geocodage' && mapData.addresses && logData.created_by) {
+      if (mapData.type === 'FeatureCollection' && mapData.features && Array.isArray(mapData.features)) {
         try {
-          const geojsonFeatures = mapData.addresses.map(addr => ({
-            type: 'Feature',
-            geometry: {
-              type: 'Point',
-              coordinates: [addr.longitude, addr.latitude]
-            },
-            properties: {
-              ...addr.properties,
-              address: addr.address,
-              codeINSEE: addr.codeINSEE
-            }
-          }))
-          
-          const geojsonData = {
-            type: 'FeatureCollection',
-            features: geojsonFeatures
-          }
-          
           // Save to generated_geojson table
           await supabaseAdmin.from('generated_geojson').insert({
             name: mapData.title || 'Carte générée par IA',
             description: mapData.description,
-            geojson_data: geojsonData,
+            geojson_data: mapData,
             ai_prompt: prompt,
-            created_by: logData.created_by,
             is_public: false
           })
           
-          console.log('GeoJSON saved to database')
+          console.log('GeoJSON saved to database with', mapData.features.length, 'features')
         } catch (saveError) {
           console.error('Failed to save GeoJSON:', saveError)
         }
@@ -280,77 +212,79 @@ IMPORTANT: Réponse TRÈS COURTE, données géographiques ESSENTIELLES seulement
           mapData.ragEnhanced = true
           mapData.documentsUsed = documents?.length || 0
           mapData.enhancedAt = new Date().toISOString()
+          mapData.rawResponse = generatedContent
           
           logData.ai_response = mapData
-        } catch (secondError) {
-          console.error('Second parsing attempt failed:', secondError)
-          mapData = null
+          
+        } catch (secondParseError) {
+          console.error('Second JSON parsing also failed:', secondParseError)
+          logData.error_message = `JSON parsing failed: ${parseError.message}. Content: ${cleanedContent.substring(0, 200)}...`
+          logData.status = 'error'
+          
+          mapData = {
+            error: 'Failed to parse AI response',
+            rawContent: cleanedContent,
+            ragEnhanced: false
+          }
         }
-      }
-      
-      // Enhanced fallback with RAG context
-      if (!mapData) {
+      } else {
+        logData.error_message = `No JSON found in response. Content: ${cleanedContent.substring(0, 200)}...`
+        logData.status = 'error'
+        
         mapData = {
-          title: "Carte enrichie par RAG",
-          description: `Carte générée avec contexte documentaire pour: ${prompt}`,
-          dataLevel: "communes",
-          ragEnhanced: true,
-          documentsUsed: documents?.length || 0,
-          analysis: "Analyse enrichie par les documents de référence disponibles",
-          sources: documents?.map(d => d.name) || [],
-          technicalSpecs: {
-            projection: "RGF93 / Lambert-93",
-            format: "GeoJSON",
-            region: "Bourgogne-Franche-Comté"
-          },
-          parseError: true,
-          rawContent: generatedContent
+          error: 'No valid JSON found in AI response',
+          rawContent: cleanedContent,
+          ragEnhanced: false
         }
       }
-      
-      logData.ai_response = mapData
     }
 
-    // 7. Log successful generation
-    logData.success = true
-    logData.execution_time_ms = Date.now() - startTime
-
-    await supabaseAdmin.from('ai_generation_logs').insert(logData)
+    // 7. Log the generation
+    logData.status = mapData.error ? 'error' : 'success'
+    
+    try {
+      await supabaseAdmin.from('ai_generation_logs').insert(logData)
+    } catch (logError) {
+      console.error('Failed to save generation log:', logError)
+    }
 
     return new Response(
-      JSON.stringify({ 
-        success: true,
-        step: step,
-        data: mapData,
-        ragEnhanced: true,
-        documentsUsed: documents?.length || 0
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify(mapData),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      }
     )
 
   } catch (error) {
     console.error('Error:', error)
     
-    logData.success = false
-    logData.error_message = error.message
-    logData.execution_time_ms = Date.now() - startTime
-
+    // Log the error
     try {
       const supabaseUrl = Deno.env.get('SUPABASE_URL')!
       const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-      const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
-      await supabaseAdmin.from('ai_generation_logs').insert(logData)
+      const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+        auth: { persistSession: false }
+      })
+      
+      await supabaseAdmin.from('ai_generation_logs').insert({
+        user_prompt: 'Error in generation',
+        status: 'error',
+        error_message: error.message,
+        created_at: new Date().toISOString()
+      })
     } catch (logError) {
       console.error('Failed to log error:', logError)
     }
-
+    
     return new Response(
       JSON.stringify({ 
-        success: false,
-        error: 'RAG-enhanced generation failed', 
-        details: error.message 
+        error: error.message,
+        ragEnhanced: false
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      { 
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      }
     )
   }
 })
