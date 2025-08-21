@@ -133,7 +133,7 @@ Format de réponse GeoJSON strict avec coordonnées réelles de Bourgogne-Franch
           { role: 'user', content: userPrompt }
         ],
         temperature: 0.1,
-        max_tokens: 1000
+        max_tokens: 3000
       }),
     })
 
@@ -149,7 +149,7 @@ Format de réponse GeoJSON strict avec coordonnées réelles de Bourgogne-Franch
     let mapData
     let cleanedContent = generatedContent
     
-    // Clean up markdown-wrapped JSON and control characters
+    // Clean up markdown-wrapped JSON
     if (cleanedContent.includes('```json')) {
       cleanedContent = cleanedContent.replace(/```json\s*/g, '').replace(/```\s*$/g, '')
     }
@@ -157,15 +157,10 @@ Format de réponse GeoJSON strict avec coordonnées réelles de Bourgogne-Franch
       cleanedContent = cleanedContent.replace(/```\s*/g, '').replace(/```\s*$/g, '')
     }
     
-    // Remove control characters that break JSON parsing
-    cleanedContent = cleanedContent
-      .replace(/[\u0000-\u001F\u007F-\u009F]/g, '') // Remove control characters
-      .replace(/\n/g, '\\n') // Escape newlines in strings
-      .replace(/\r/g, '\\r') // Escape carriage returns
-      .replace(/\t/g, '\\t') // Escape tabs
-      .trim()
+    cleanedContent = cleanedContent.trim()
     
-    console.log('Cleaned content:', cleanedContent)
+    console.log('Raw AI response length:', generatedContent.length)
+    console.log('Cleaned content preview:', cleanedContent.substring(0, 200))
     
     try {
       mapData = JSON.parse(cleanedContent)
@@ -201,12 +196,28 @@ Format de réponse GeoJSON strict avec coordonnées réelles de Bourgogne-Franch
       console.error('Raw content:', generatedContent)
       console.error('Cleaned content:', cleanedContent)
       
-      // Try to extract JSON from malformed content
-      const jsonMatch = cleanedContent.match(/\{[\s\S]*\}/)
+      // Try to extract and fix JSON from malformed content
+      const jsonMatch = cleanedContent.match(/\{[\s\S]*/)
       if (jsonMatch) {
+        let jsonStr = jsonMatch[0]
+        
+        // Try to fix incomplete JSON by completing missing brackets and quotes
+        const openBraces = (jsonStr.match(/\{/g) || []).length
+        const closeBraces = (jsonStr.match(/\}/g) || []).length
+        const openBrackets = (jsonStr.match(/\[/g) || []).length
+        const closeBrackets = (jsonStr.match(/\]/g) || []).length
+        
+        // Add missing closing brackets and braces
+        for (let i = 0; i < openBrackets - closeBrackets; i++) {
+          jsonStr += ']'
+        }
+        for (let i = 0; i < openBraces - closeBraces; i++) {
+          jsonStr += '}'
+        }
+        
         try {
-          mapData = JSON.parse(jsonMatch[0])
-          console.log('Successfully parsed extracted JSON')
+          mapData = JSON.parse(jsonStr)
+          console.log('Successfully parsed and fixed extracted JSON')
           
           // Add RAG metadata
           mapData.ragEnhanced = true
@@ -215,6 +226,22 @@ Format de réponse GeoJSON strict avec coordonnées réelles de Bourgogne-Franch
           mapData.rawResponse = generatedContent
           
           logData.ai_response = mapData
+          
+          // Save to database if valid
+          if (mapData.type === 'FeatureCollection' && mapData.features && Array.isArray(mapData.features)) {
+            try {
+              await supabaseAdmin.from('generated_geojson').insert({
+                name: mapData.title || 'Carte générée par IA',
+                description: mapData.description,
+                geojson_data: mapData,
+                ai_prompt: prompt,
+                is_public: false
+              })
+              console.log('Fixed GeoJSON saved to database with', mapData.features.length, 'features')
+            } catch (saveError) {
+              console.error('Failed to save fixed GeoJSON:', saveError)
+            }
+          }
           
         } catch (secondParseError) {
           console.error('Second JSON parsing also failed:', secondParseError)
