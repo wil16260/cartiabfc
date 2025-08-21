@@ -41,8 +41,8 @@ serve(async (req) => {
     const { data: documents, error: docError } = await supabaseAdmin
       .from('documents')
       .select('*')
-      .eq('status', 'active')
-      .eq('is_processed', true)
+      .eq('is_active', true)
+      .eq('embedding_processed', true)
       .limit(5)
 
     if (docError) {
@@ -70,17 +70,14 @@ serve(async (req) => {
 
     // 4. Build enhanced prompt with RAG context
     const systemPrompt = `Tu es un expert en cartographie et données géographiques de la région Bourgogne-Franche-Comté.
-Tu utilises les documents fournis pour créer des cartes GeoJSON précises.
 
-${ragContext ? `CONTEXTE DISPONIBLE: ${ragContext}` : ''}
-
-Instructions:
-- Utilise uniquement les données factuelles des documents fournis
+Instructions strictes:
+- Réponds UNIQUEMENT avec un objet JSON GeoJSON valide
+- Pas de texte avant ou après le JSON
+- Pas de formatage markdown
 - Génère des coordonnées GPS réelles pour la région BFC (latitude 46-48°N, longitude 3-7°E)
-- Format de réponse: GeoJSON FeatureCollection valide uniquement
-- Sois précis et concis
 
-Format de réponse GeoJSON strict:
+Format de réponse JSON strict (pas de markdown):
 {
   "type": "FeatureCollection",
   "title": "Titre de la carte",
@@ -101,16 +98,15 @@ Format de réponse GeoJSON strict:
   ]
 }
 
-IMPORTANT: Génère des coordonnées GPS réelles pour la région Bourgogne-Franche-Comté !`
+CRITICAL: Réponds avec JSON pur uniquement, pas de texte explicatif !`
 
-    const userPrompt = `${ragContext}
-
-Créer une carte de: ${prompt}
+    const userPrompt = `Créer une carte de: ${prompt}
 ${step ? `Étape: ${step}` : ''}
 ${dataLevel ? `Niveau géographique: ${dataLevel}` : ''}
 ${recommendedMapType ? `Type de carte recommandé: ${recommendedMapType}` : ''}
 
-Format de réponse GeoJSON strict avec coordonnées réelles de Bourgogne-Franche-Comté.`
+Réponds avec un GeoJSON FeatureCollection avec au moins 5 points géolocalisés en Bourgogne-Franche-Comté.
+JSON uniquement, pas de texte.`
 
     logData.system_prompt = systemPrompt
 
@@ -133,7 +129,7 @@ Format de réponse GeoJSON strict avec coordonnées réelles de Bourgogne-Franch
           { role: 'user', content: userPrompt }
         ],
         temperature: 0.1,
-        max_tokens: 3000
+        max_completion_tokens: 2000
       }),
     })
 
@@ -160,6 +156,7 @@ Format de réponse GeoJSON strict avec coordonnées réelles de Bourgogne-Franch
     cleanedContent = cleanedContent.trim()
     
     console.log('Raw AI response length:', generatedContent.length)
+    console.log('Raw AI response:', generatedContent)
     console.log('Cleaned content preview:', cleanedContent.substring(0, 200))
     
     try {
