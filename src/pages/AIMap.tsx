@@ -88,10 +88,6 @@ const AIMap = () => {
   };
 
   const handleSearch = async (prompt: string) => {
-    if (!user) {
-      toast.error("Veuillez vous connecter pour générer des cartes");
-      return;
-    }
 
     setCurrentPrompt(prompt);
     setIsGenerating(true);
@@ -130,7 +126,6 @@ const AIMap = () => {
       const { data: logs, error: logsError } = await supabase
         .from('ai_generation_logs')
         .select('*')
-        .eq('created_by', user.id)
         .eq('user_prompt', prompt)
         .order('created_at', { ascending: false })
         .limit(5);
@@ -174,45 +169,46 @@ const AIMap = () => {
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
         const filename = `ai-generated-${timestamp}.json`;
         
-        // Save to Supabase generated_geojson table
-        const { data: savedData, error: saveError } = await supabase
-          .from('generated_geojson')
-          .insert({
-            name: aiResponse.title || `AI Generated Map - ${timestamp}`,
-            description: `Generated from prompt: "${prompt}"`,
-            geojson_data: aiResponse,
-            ai_prompt: prompt,
-            created_by: user.id
-          })
-          .select()
-          .single();
+        // Save to Supabase generated_geojson table (only if user is authenticated)
+        if (user) {
+          const { data: savedData, error: saveError } = await supabase
+            .from('generated_geojson')
+            .insert({
+              name: aiResponse.title || `AI Generated Map - ${timestamp}`,
+              description: `Generated from prompt: "${prompt}"`,
+              geojson_data: aiResponse,
+              ai_prompt: prompt,
+              created_by: user.id
+            })
+            .select()
+            .single();
 
-        if (saveError) {
-          console.error('Error saving AI data:', saveError);
-        } else {
-          console.log('AI data saved successfully:', savedData);
-          
-          // Add the AI-generated layer to the map
-          if (aiResponse.layers && Array.isArray(aiResponse.layers)) {
-            const newLayers = aiResponse.layers.map((layer: any, index: number) => ({
-              id: `ai_${Date.now()}_${index}`,
-              name: layer.name || `AI Layer ${index + 1}`,
-              enabled: true,
-              description: `AI generated: ${layer.name}`,
-              type: 'ai' as const,
-              color: layer.color || '#ff6b6b',
-              opacity: 0.8,
-              data: layer.data
-            }));
-
-            setMapLayers(prev => [...prev, ...newLayers]);
+          if (saveError) {
+            console.error('Error saving AI data:', saveError);
           }
-
-          setGeneratedMap(aiResponse);
-          setShowAIAnalysis(true);
-          
-          toast.success("Carte générée avec succès !");
         }
+
+        
+        // Add the AI-generated layer to the map
+        if (aiResponse.layers && Array.isArray(aiResponse.layers)) {
+          const newLayers = aiResponse.layers.map((layer: any, index: number) => ({
+            id: `ai_${Date.now()}_${index}`,
+            name: layer.name || `AI Layer ${index + 1}`,
+            enabled: true,
+            description: `AI generated: ${layer.name}`,
+            type: 'ai' as const,
+            color: layer.color || '#ff6b6b',
+            opacity: 0.8,
+            data: layer.data
+          }));
+
+          setMapLayers(prev => [...prev, ...newLayers]);
+        }
+
+        setGeneratedMap(aiResponse);
+        setShowAIAnalysis(true);
+        
+        toast.success("Carte générée avec succès !");
       } else {
         toast.error("Aucune donnée géographique valide trouvée dans la réponse IA");
       }
