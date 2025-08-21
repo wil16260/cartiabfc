@@ -1,17 +1,26 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Upload, Brain } from "lucide-react";
+import { Upload, Brain, Sparkles } from "lucide-react";
 import FileUpload from "@/components/FileUpload";
 import SmartFileProcessor from "@/components/SmartFileProcessor";
 import UMapDisplay from "@/components/UMapDisplay";
 import FilterPanel from "@/components/FilterPanel";
+import SearchBar from "@/components/SearchBar";
+import ProgressBar from "@/components/ProgressBar";
+import AIAnalysisPanel from "@/components/AIAnalysisPanel";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { Link } from "react-router-dom";
 
 const Index = () => {
+  const { user } = useAuth();
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [showFileUpload, setShowFileUpload] = useState(false);
+  const [generatedMapData, setGeneratedMapData] = useState<any>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [showProgress, setShowProgress] = useState(false);
+  const [showAIAnalysis, setShowAIAnalysis] = useState(false);
   const [mapLayers, setMapLayers] = useState<Array<{
     id: string;
     name: string;
@@ -125,6 +134,62 @@ const Index = () => {
     toast.success("Couche supprimée");
   };
 
+  const handleAIGeneration = async (prompt: string) => {
+    setIsGenerating(true);
+    setShowProgress(true);
+    setShowAIAnalysis(false);
+
+    try {
+      console.log('Generating map with AI...');
+      const generateResponse = await supabase.functions.invoke('rag-enhanced-map-generation', {
+        body: { 
+          prompt,
+          step: 1,
+          dataLevel: 'communes',
+          recommendedMapType: 'geocodage'
+        }
+      });
+
+      if (generateResponse.error) {
+        throw new Error(`Generation error: ${generateResponse.error.message}`);
+      }
+
+      console.log('Map generation response:', generateResponse.data);
+
+      // Check if response contains GeoJSON data directly
+      if (generateResponse.data && generateResponse.data.type === 'FeatureCollection') {
+        const geojsonData = generateResponse.data;
+        console.log('Generated GeoJSON with', geojsonData.features?.length || 0, 'features');
+        
+        setGeneratedMapData(geojsonData);
+        
+        // Add AI layer to map
+        const aiLayer = {
+          id: `ai_${Date.now()}`,
+          name: `IA: ${prompt}`,
+          enabled: true,
+          description: `Carte générée par IA`,
+          type: 'ai' as const,
+          color: '#f59e0b',
+          opacity: 0.8,
+          data: geojsonData
+        };
+        
+        setMapLayers(prev => [...prev, aiLayer]);
+        toast.success(`Carte générée avec succès! ${geojsonData.features?.length || 0} éléments créés`);
+      } else {
+        toast.error("L'IA n'a pas généré de données géographiques valides");
+      }
+
+    } catch (error) {
+      console.error('Error in handleAIGeneration:', error);
+      toast.error(`Erreur lors de la génération: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
+    } finally {
+      setIsGenerating(false);
+      setShowProgress(false);
+    }
+  };
+
   const visibleLayers = mapLayers.filter(layer => layer.enabled).map(layer => layer.id);
 
   return (
@@ -136,8 +201,15 @@ const Index = () => {
             Carte Interactive de Bourgogne-Franche-Comté
           </h1>
           <p className="text-lg text-muted-foreground mb-6">
-            Visualisez les données géographiques avec des limites départementales, EPCI et communes
+            Visualisez les données géographiques avec IA, limites départementales, EPCI et communes
           </p>
+          
+          <div className="bg-card/50 backdrop-blur-sm rounded-lg border p-6 mb-6">
+            <SearchBar 
+              onSearch={handleAIGeneration} 
+              isLoading={isGenerating}
+            />
+          </div>
           
           <div className="flex justify-center gap-4">
             <Button 
@@ -150,19 +222,26 @@ const Index = () => {
               Importer des fichiers
             </Button>
             
-            <Button 
-              asChild
-              variant="default"
-              size="lg"
-              className="group"
-            >
-              <Link to="/ai-map">
-                <Brain className="mr-2 h-4 w-4 group-hover:scale-110 transition-transform" />
-                Génération IA
-              </Link>
-            </Button>
+            {generatedMapData && (
+              <Button
+                onClick={() => setShowAIAnalysis(!showAIAnalysis)}
+                variant="outline"
+                size="lg"
+                className="group"
+              >
+                <Sparkles className="mr-2 h-4 w-4 group-hover:scale-110 transition-transform" />
+                Voir l'analyse IA
+              </Button>
+            )}
           </div>
         </div>
+
+        {/* Progress Bar */}
+        {showProgress && (
+          <div className="mb-6">
+            <ProgressBar isActive={showProgress} />
+          </div>
+        )}
 
         {/* File Upload Section */}
         {showFileUpload && (
@@ -193,6 +272,16 @@ const Index = () => {
               onLayerStyleChange={handleLayerStyleChange}
               onLayerDelete={handleLayerDelete}
             />
+            
+            {/* AI Analysis Panel */}
+            {showAIAnalysis && generatedMapData && (
+              <div className="mt-6">
+                <AIAnalysisPanel 
+                  generatedMap={generatedMapData} 
+                  isVisible={showAIAnalysis}
+                />
+              </div>
+            )}
           </div>
 
           {/* Right Column - Map */}
@@ -200,6 +289,7 @@ const Index = () => {
             <UMapDisplay 
               visibleLayers={visibleLayers}
               layers={mapLayers}
+              generatedMap={generatedMapData}
             />
           </div>
         </div>
