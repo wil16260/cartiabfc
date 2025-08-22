@@ -133,7 +133,20 @@ JSON uniquement, pas de texte.`
     })
 
     if (!response.ok) {
-      throw new Error(`Mistral API error: ${response.statusText}`)
+      const errorText = await response.text()
+      console.error('Mistral API error response:', errorText)
+      
+      // Log the error before throwing
+      logData.error_message = `Mistral API error: ${response.status} ${response.statusText} - ${errorText}`
+      logData.status = 'error'
+      
+      try {
+        await supabaseAdmin.from('ai_generation_logs').insert(logData)
+      } catch (logError) {
+        console.error('Failed to save error log:', logError)
+      }
+      
+      throw new Error(`Mistral API error: ${response.status} ${response.statusText}`)
     }
 
     const data = await response.json()
