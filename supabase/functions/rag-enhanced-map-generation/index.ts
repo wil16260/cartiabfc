@@ -30,8 +30,7 @@ serve(async (req) => {
     // Initialize log data
     const logData: any = {
       user_prompt: prompt,
-      step: step || 1,
-      status: 'processing',
+      success: false,
       created_at: new Date().toISOString()
     }
 
@@ -138,7 +137,7 @@ JSON uniquement, pas de texte.`
       
       // Log the error before throwing
       logData.error_message = `Mistral API error: ${response.status} ${response.statusText} - ${errorText}`
-      logData.status = 'error'
+      logData.success = false
       
       try {
         await supabaseAdmin.from('ai_generation_logs').insert(logData)
@@ -255,7 +254,7 @@ JSON uniquement, pas de texte.`
         } catch (secondParseError) {
           console.error('Second JSON parsing also failed:', secondParseError)
           logData.error_message = `JSON parsing failed: ${parseError.message}. Content: ${cleanedContent.substring(0, 200)}...`
-          logData.status = 'error'
+          logData.success = false
           
           mapData = {
             error: 'Failed to parse AI response',
@@ -265,7 +264,7 @@ JSON uniquement, pas de texte.`
         }
       } else {
         logData.error_message = `No JSON found in response. Content: ${cleanedContent.substring(0, 200)}...`
-        logData.status = 'error'
+        logData.success = false
         
         mapData = {
           error: 'No valid JSON found in AI response',
@@ -276,7 +275,7 @@ JSON uniquement, pas de texte.`
     }
 
     // 7. Log the generation
-    logData.status = mapData.error ? 'error' : 'success'
+    logData.success = !mapData.error
     
     try {
       await supabaseAdmin.from('ai_generation_logs').insert(logData)
@@ -304,7 +303,7 @@ JSON uniquement, pas de texte.`
       
       await supabaseAdmin.from('ai_generation_logs').insert({
         user_prompt: 'Error in generation',
-        status: 'error',
+        success: false,
         error_message: error.message,
         created_at: new Date().toISOString()
       })
