@@ -1,6 +1,5 @@
 
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Settings, Cpu, Palette, Activity, Save, LogOut, BarChart3, MapPin, Eye, EyeOff, FileText, Database, Brain, Link as LinkIcon } from "lucide-react";
+import { Settings, Cpu, Palette, Activity, Save, LogOut, BarChart3, MapPin, Eye, EyeOff, FileText, Database, Brain, Link } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
@@ -87,12 +86,8 @@ const Admin = () => {
               {user && !isAdmin && " Votre compte n'a pas les privilèges administrateur."}
             </p>
             <div className="flex gap-2 justify-center">
-              <Link to="/auth">
-                <Button>Se connecter</Button>
-              </Link>
-              <Link to="/">
-                <Button variant="outline">Retour à l'accueil</Button>
-              </Link>
+              <Button onClick={() => window.location.href = '/auth'}>Se connecter</Button>
+              <Button variant="outline" onClick={() => window.location.href = '/'}>Retour à l'accueil</Button>
             </div>
           </CardContent>
         </Card>
@@ -202,7 +197,7 @@ const Admin = () => {
               GeoJSON
             </TabsTrigger>
             <TabsTrigger value="shared-links" className="gap-2">
-              <LinkIcon className="h-4 w-4" />
+              <Link className="h-4 w-4" />
               Liens partagés
             </TabsTrigger>
             <TabsTrigger value="analytics" className="gap-2">
