@@ -111,8 +111,8 @@ const AIMap = () => {
       const analysisData = analyzeResponse.data;
       console.log('Analysis result:', analysisData);
 
-      console.log('Generating map...');
-      const generateResponse = await supabase.functions.invoke('rag-enhanced-map-generation', {
+      console.log('Generating enhanced map with geocoding...');
+      const generateResponse = await supabase.functions.invoke('enhanced-geocoding-map-generation', {
         body: { 
           prompt,
           dataLevel: analysisData?.dataLevel || 'communes',
