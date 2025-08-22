@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Sparkles, Upload } from "lucide-react";
+import { Sparkles, Upload, Share2, Maximize2 } from "lucide-react";
 import SearchBar from "@/components/SearchBar";
 import FileUpload from "@/components/FileUpload";
 import SmartFileProcessor from "@/components/SmartFileProcessor";
@@ -9,6 +9,7 @@ import UMapDisplay from "@/components/UMapDisplay";
 import FilterPanel from "@/components/FilterPanel";
 import ProgressBar from "@/components/ProgressBar";
 import AIAnalysisPanel from "@/components/AIAnalysisPanel";
+import MapShareDialog from "@/components/MapShareDialog";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -24,6 +25,7 @@ const AIMap = () => {
   const [showFileUpload, setShowFileUpload] = useState(false);
   const [showProgress, setShowProgress] = useState(false);
   const [showAIAnalysis, setShowAIAnalysis] = useState(false);
+  const [showShareDialog, setShowShareDialog] = useState(false);
   const [mapLayers, setMapLayers] = useState<Array<{
     id: string;
     name: string;
@@ -281,16 +283,27 @@ const AIMap = () => {
                 Importer des fichiers
               </Button>
               
-              {generatedMap && (
-                <Button
-                  onClick={() => setShowAIAnalysis(!showAIAnalysis)}
-                  variant="outline"
-                  size="lg"
-                  className="group"
-                >
-                  <Sparkles className="mr-2 h-4 w-4 group-hover:scale-110 transition-transform" />
-                  Voir l'analyse IA
-                </Button>
+              {(generatedMapData || generatedMap) && (
+                <>
+                  <Button
+                    onClick={() => setShowAIAnalysis(!showAIAnalysis)}
+                    variant="outline"
+                    size="lg"
+                    className="group"
+                  >
+                    <Sparkles className="mr-2 h-4 w-4 group-hover:scale-110 transition-transform" />
+                    Voir l'analyse IA
+                  </Button>
+                  <Button
+                    onClick={() => setShowShareDialog(true)}
+                    variant="outline"
+                    size="lg"
+                    className="group"
+                  >
+                    <Share2 className="mr-2 h-4 w-4 group-hover:scale-110 transition-transform" />
+                    Partager la carte
+                  </Button>
+                </>
               )}
             </div>
           </div>
@@ -361,6 +374,14 @@ const AIMap = () => {
           </div>
         </div>
       </section>
+
+      {/* Share Dialog */}
+      <MapShareDialog
+        open={showShareDialog}
+        onOpenChange={setShowShareDialog}
+        mapData={generatedMapData || generatedMap}
+        layers={mapLayers}
+      />
     </div>
   );
 };

@@ -32,6 +32,8 @@ interface UMapDisplayProps {
     opacity?: number;
     geojsonData?: any;
   }>;
+  isSharedView?: boolean;
+  isFullscreen?: boolean;
 }
 
 interface MapConfig {
@@ -39,7 +41,7 @@ interface MapConfig {
   credits: string;
 }
 
-const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [], generatedMap, layers = [] }: UMapDisplayProps) => {
+const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [], generatedMap, layers = [], isSharedView = false, isFullscreen = false }: UMapDisplayProps) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<L.Map | null>(null);
   const [drawnItems, setDrawnItems] = useState<L.FeatureGroup | null>(null);

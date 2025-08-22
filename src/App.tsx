@@ -8,6 +8,8 @@ import Index from "./pages/Index";
 import AIMap from "./pages/AIMap";
 import Admin from "./pages/Admin";
 import Auth from "./pages/Auth";
+import SharedMap from "./pages/SharedMap";
+import FullscreenMap from "./pages/FullscreenMap";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +26,8 @@ const App = () => (
           <Route path="/ai-map" element={<AIMap />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/auth" element={<Auth />} />
+          <Route path="/map/:shareToken" element={<SharedMap />} />
+          <Route path="/map/fullscreen/:shareToken" element={<FullscreenMap />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
