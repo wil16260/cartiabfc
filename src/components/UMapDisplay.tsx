@@ -167,8 +167,9 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [], generatedM
       attribution: '© CARTO'
     });
 
-    const planIgnLayer = L.tileLayer('https://wxs.ign.fr/choisirgeoportail/geoportail/wmts?REQUEST=GetTile&SERVICE=WMTS&VERSION=1.0.0&STYLE=normal&TILEMATRIXSET=PM&FORMAT=image/png&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}', {
-      attribution: '© IGN'
+    const planIgnLayer = L.tileLayer('https://wxs.ign.fr/cartes/geoportail/wmts?REQUEST=GetTile&SERVICE=WMTS&VERSION=1.0.0&STYLE=normal&TILEMATRIXSET=PM&FORMAT=image/png&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}', {
+      attribution: '© IGN',
+      maxZoom: 18
     });
 
     // Add default layer
