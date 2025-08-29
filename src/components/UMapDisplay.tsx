@@ -5,7 +5,7 @@ import "leaflet/dist/leaflet.css";
 import "leaflet-draw/dist/leaflet.draw.css";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, Share2, Edit3, Check, X, Map, Layers, Palette, Save, Square, Circle, MapPin, Pen, Trash2 } from "lucide-react";
+import { Download, Share2, Edit3, Check, X, Map, Layers, Palette, Save, Square, Circle, MapPin, Pen, Trash2, Navigation } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 
@@ -766,6 +766,30 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [], generatedM
           <div className="absolute top-4 right-4 z-[400] bg-white/95 backdrop-blur-sm rounded-lg p-2 shadow-lg border">
             <div className="w-[120px] h-[80px] bg-gray-100 rounded flex items-center justify-center border-2 border-dashed border-gray-300">
               <span className="text-xs text-gray-500 text-center">Logo région<br/>à remplacer</span>
+            </div>
+          </div>
+          
+          {/* North Arrow - Bottom Left Above Tools */}
+          <div className="absolute bottom-20 left-2 z-[400] bg-white/90 backdrop-blur-sm rounded px-2 py-1 shadow-sm border">
+            <div className="flex flex-col items-center">
+              <Navigation className="h-6 w-6 text-gray-700" style={{ transform: 'rotate(-45deg)' }} />
+              <span className="text-xs font-semibold text-gray-700">N</span>
+            </div>
+          </div>
+          
+          {/* Graphic Scale - Bottom Left Above Tools */}
+          <div className="absolute bottom-12 left-2 z-[400] bg-white/90 backdrop-blur-sm rounded px-2 py-1 shadow-sm border">
+            <div className="flex flex-col items-start">
+              <div className="flex items-end">
+                <div className="border-b-2 border-l-2 border-gray-700 w-8 h-2"></div>
+                <div className="border-b-2 border-gray-300 w-8 h-2"></div>
+                <div className="border-b-2 border-r-2 border-gray-700 w-8 h-2"></div>
+              </div>
+              <div className="flex justify-between w-full text-xs text-gray-700 mt-1">
+                <span>0</span>
+                <span>10</span>
+                <span>20 km</span>
+              </div>
             </div>
           </div>
           
