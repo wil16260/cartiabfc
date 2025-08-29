@@ -39,6 +39,7 @@ interface UMapDisplayProps {
 interface MapConfig {
   title: string;
   credits: string;
+  dataLabel: string;
 }
 
 const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [], generatedMap, layers = [], isSharedView = false, isFullscreen = false }: UMapDisplayProps) => {
@@ -47,10 +48,13 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [], generatedM
   const [drawnItems, setDrawnItems] = useState<L.FeatureGroup | null>(null);
   const [mapConfig, setMapConfig] = useState<MapConfig>({
     title: "Carte de Bourgogne-Franche-Comté",
-    credits: "Données: IGN, INSEE | Réalisé avec uMap-like editor"
+    credits: "Données: IGN, INSEE | Réalisé avec uMap-like editor",
+    dataLabel: "Données"
   });
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [tempTitle, setTempTitle] = useState(mapConfig.title);
+  const [isEditingDataLabel, setIsEditingDataLabel] = useState(false);
+  const [tempDataLabel, setTempDataLabel] = useState(mapConfig.dataLabel);
   const [geoData, setGeoData] = useState<any>(null);
   const [aiGeneratedData, setAiGeneratedData] = useState<any>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -225,7 +229,7 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [], generatedM
       }
     });
 
-    new LayerControlCheckbox({ position: 'topright' }).addTo(leafletMap);
+    // Don't add the layer control to the map - it will be in a separate div
 
     // Initialize drawing features
     const drawnItemsGroup = new L.FeatureGroup();
@@ -645,6 +649,20 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [], generatedM
     setIsEditingTitle(false);
   };
 
+  const handleDataLabelEdit = () => {
+    if (isEditingDataLabel) {
+      setMapConfig(prev => ({ ...prev, dataLabel: tempDataLabel }));
+      setIsEditingDataLabel(false);
+    } else {
+      setIsEditingDataLabel(true);
+    }
+  };
+
+  const cancelDataLabelEdit = () => {
+    setTempDataLabel(mapConfig.dataLabel);
+    setIsEditingDataLabel(false);
+  };
+
   const exportMap = () => {
     if (!map) return;
     
@@ -757,11 +775,55 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [], generatedM
               </div>
             </div>
           )}
+          
+          {/* Map Container */}
           <div 
             ref={mapRef} 
             className="w-full h-[600px] border rounded-lg bg-white"
             style={{ zIndex: 1 }}
           />
+          
+          {/* Logo Overlay - Top Right */}
+          <div className="absolute top-4 right-4 z-[400] bg-white/95 backdrop-blur-sm rounded-lg p-4 shadow-lg border">
+            <div className="flex flex-col items-center text-center max-w-[140px]">
+              <div className="font-bold text-sm leading-tight text-gray-800">
+                <div className="mb-1">RÉGION</div>
+                <div className="w-full h-0.5 bg-yellow-400 mb-2"></div>
+                <div className="mb-1">BOURGOGNE</div>
+                <div className="w-full h-0.5 bg-yellow-400 mb-2"></div>
+                <div className="mb-1">FRANCHE</div>
+                <div className="w-full h-0.5 bg-yellow-400 mb-2"></div>
+                <div>COMTÉ</div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Title Overlay - Top Center */}
+          <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-[400] bg-black/60 text-white px-4 py-2 rounded-lg backdrop-blur-sm">
+            {isEditingTitle ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={tempTitle}
+                  onChange={(e) => setTempTitle(e.target.value)}
+                  className="bg-transparent border-b border-white/50 focus:outline-none text-white placeholder-white/70"
+                  onKeyPress={(e) => e.key === 'Enter' && handleTitleEdit()}
+                  autoFocus
+                />
+                <Button size="sm" variant="ghost" onClick={handleTitleEdit} className="text-white hover:bg-white/20">
+                  <Check className="h-4 w-4" />
+                </Button>
+                <Button size="sm" variant="ghost" onClick={cancelTitleEdit} className="text-white hover:bg-white/20">
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 cursor-pointer" onClick={handleTitleEdit}>
+                <span className="font-semibold">{mapConfig.title}</span>
+                <Edit3 className="h-4 w-4 opacity-70 hover:opacity-100" />
+              </div>
+            )}
+          </div>
         </div>
         <div className="mt-4 text-center">
           <p className="text-sm text-muted-foreground">{mapConfig.credits}</p>

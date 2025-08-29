@@ -5,7 +5,7 @@ import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Input } from "@/components/ui/input";
-import { Layers, Database, Map, MapPin, Palette, Plus, Trash2, Settings } from "lucide-react";
+import { Layers, Database, Map, MapPin, Palette, Plus, Trash2, Settings, Edit3, Check, X } from "lucide-react";
 
 interface FilterPanelProps {
   layers: {
@@ -21,9 +21,14 @@ interface FilterPanelProps {
   onLayerDelete?: (layerId: string) => void;
   onLayerStyleChange?: (layerId: string, style: { color?: string; opacity?: number }) => void;
   onAddLayer?: () => void;
+  mapConfig?: {
+    dataLabel: string;
+  };
+  onDataLabelEdit?: () => void;
+  isEditingDataLabel?: boolean;
 }
 
-const FilterPanel = ({ layers, onLayerToggle, onLayerDelete, onLayerStyleChange, onAddLayer }: FilterPanelProps) => {
+const FilterPanel = ({ layers, onLayerToggle, onLayerDelete, onLayerStyleChange, onAddLayer, mapConfig, onDataLabelEdit, isEditingDataLabel }: FilterPanelProps) => {
   const baseLayers = layers.filter(layer => layer.type === 'base' && layer.id !== 'base_ign');
   const aiLayers = layers.filter(layer => layer.type === 'ai' || (!layer.type && !layer.id.startsWith('base_')));
 
@@ -59,7 +64,28 @@ const FilterPanel = ({ layers, onLayerToggle, onLayerDelete, onLayerStyleChange,
           <CardTitle className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Layers className="h-5 w-5 text-primary" />
-              Couches de données
+              {isEditingDataLabel ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={mapConfig?.dataLabel || "Données"}
+                    className="bg-transparent border-b border-primary focus:outline-none font-semibold"
+                    onKeyPress={(e) => e.key === 'Enter' && onDataLabelEdit?.()}
+                    autoFocus
+                  />
+                  <Button size="sm" variant="ghost" onClick={onDataLabelEdit} className="h-6 w-6 p-0">
+                    <Check className="h-3 w-3" />
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={onDataLabelEdit} className="h-6 w-6 p-0">
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              ) : (
+                <span className="cursor-pointer flex items-center gap-1" onClick={onDataLabelEdit}>
+                  {mapConfig?.dataLabel || "Couches de données"}
+                  <Edit3 className="h-3 w-3 text-muted-foreground hover:text-primary" />
+                </span>
+              )}
             </div>
             {onAddLayer && (
               <Button
@@ -75,7 +101,33 @@ const FilterPanel = ({ layers, onLayerToggle, onLayerDelete, onLayerStyleChange,
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Base layers (only departements) */}
+          {/* Base Layers Control Section */}
+          <div className="bg-muted/30 p-4 rounded-lg">
+            <h4 className="font-medium mb-3 text-sm text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+              <Map className="h-4 w-4" />
+              Couches de base
+            </h4>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" defaultChecked className="rounded" />
+                <span>OpenStreetMap</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" className="rounded" />
+                <span>Satellite</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" className="rounded" />
+                <span>Carto Light</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" className="rounded" />
+                <span>Plan IGN</span>
+              </label>
+            </div>
+          </div>
+
+          {/* Administrative boundaries */}
           {baseLayers.length > 0 && (
             <div>
               <h4 className="font-medium mb-3 text-sm text-muted-foreground uppercase tracking-wide">

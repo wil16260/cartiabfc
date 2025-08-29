@@ -26,6 +26,9 @@ const AIMap = () => {
   const [showProgress, setShowProgress] = useState(false);
   const [showAIAnalysis, setShowAIAnalysis] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
+  const [mapConfig, setMapConfig] = useState({ dataLabel: "Données" });
+  const [isEditingDataLabel, setIsEditingDataLabel] = useState(false);
+  const [tempDataLabel, setTempDataLabel] = useState(mapConfig.dataLabel);
   const [mapLayers, setMapLayers] = useState<Array<{
     id: string;
     name: string;
@@ -241,6 +244,15 @@ const AIMap = () => {
     toast.success("Couche supprimée");
   };
 
+  const handleDataLabelEdit = () => {
+    if (isEditingDataLabel) {
+      setMapConfig(prev => ({ ...prev, dataLabel: tempDataLabel }));
+      setIsEditingDataLabel(false);
+    } else {
+      setIsEditingDataLabel(true);
+    }
+  };
+
   const shouldEnableLayer = (layerId: string, dataLevel: string): boolean => {
     const levelMap = {
       'departements': ['base_departments'],
@@ -348,6 +360,9 @@ const AIMap = () => {
               onLayerToggle={handleLayerToggle}
               onLayerStyleChange={handleLayerStyleChange}
               onLayerDelete={handleLayerDelete}
+              mapConfig={mapConfig}
+              onDataLabelEdit={handleDataLabelEdit}
+              isEditingDataLabel={isEditingDataLabel}
             />
             
             {/* AI Analysis Panel */}

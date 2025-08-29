@@ -21,6 +21,9 @@ const Index = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [showProgress, setShowProgress] = useState(false);
   const [showAIAnalysis, setShowAIAnalysis] = useState(false);
+  const [mapConfig, setMapConfig] = useState({ dataLabel: "Données" });
+  const [isEditingDataLabel, setIsEditingDataLabel] = useState(false);
+  const [tempDataLabel, setTempDataLabel] = useState(mapConfig.dataLabel);
   const [mapLayers, setMapLayers] = useState<Array<{
     id: string;
     name: string;
@@ -132,6 +135,15 @@ const Index = () => {
   const handleLayerDelete = (layerId: string) => {
     setMapLayers(prev => prev.filter(layer => layer.id !== layerId));
     toast.success("Couche supprimée");
+  };
+
+  const handleDataLabelEdit = () => {
+    if (isEditingDataLabel) {
+      setMapConfig(prev => ({ ...prev, dataLabel: tempDataLabel }));
+      setIsEditingDataLabel(false);
+    } else {
+      setIsEditingDataLabel(true);
+    }
   };
 
   const handleAIGeneration = async (prompt: string) => {
@@ -271,6 +283,9 @@ const Index = () => {
               onLayerToggle={handleLayerToggle}
               onLayerStyleChange={handleLayerStyleChange}
               onLayerDelete={handleLayerDelete}
+              mapConfig={mapConfig}
+              onDataLabelEdit={handleDataLabelEdit}
+              isEditingDataLabel={isEditingDataLabel}
             />
             
             {/* AI Analysis Panel */}
