@@ -732,38 +732,6 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [], generatedM
             </CardTitle>
           )}
         </div>
-        <div className="flex gap-2">
-          {aiGeneratedData && (
-            <Button 
-              variant={showDataVisualization ? "default" : "outline"} 
-              size="sm" 
-              onClick={() => setShowDataVisualization(!showDataVisualization)}
-            >
-              <Palette className="h-4 w-4 mr-1" />
-              {showDataVisualization ? "Masquer données" : "Afficher données"}
-            </Button>
-          )}
-          <Button 
-            variant={isEditing ? "default" : "outline"} 
-            size="sm" 
-            onClick={toggleEditMode}
-          >
-            <Edit3 className="h-4 w-4 mr-1" />
-            {isEditing ? "Mode lecture" : "Éditer"}
-          </Button>
-          <Button variant="outline" size="sm" onClick={saveMap}>
-            <Save className="h-4 w-4 mr-1" />
-            Sauvegarder
-          </Button>
-          <Button variant="outline" size="sm" onClick={exportMap}>
-            <Download className="h-4 w-4 mr-1" />
-            Export
-          </Button>
-          <Button variant="outline" size="sm" onClick={shareMap}>
-            <Share2 className="h-4 w-4 mr-1" />
-            Partager
-          </Button>
-        </div>
       </CardHeader>
       <CardContent>
         <div className="relative bg-muted/20 rounded-lg overflow-hidden">
@@ -784,17 +752,9 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [], generatedM
           />
           
           {/* Logo Overlay - Top Right */}
-          <div className="absolute top-4 right-4 z-[400] bg-white/95 backdrop-blur-sm rounded-lg p-4 shadow-lg border">
-            <div className="flex flex-col items-center text-center max-w-[140px]">
-              <div className="font-bold text-sm leading-tight text-gray-800">
-                <div className="mb-1">RÉGION</div>
-                <div className="w-full h-0.5 bg-yellow-400 mb-2"></div>
-                <div className="mb-1">BOURGOGNE</div>
-                <div className="w-full h-0.5 bg-yellow-400 mb-2"></div>
-                <div className="mb-1">FRANCHE</div>
-                <div className="w-full h-0.5 bg-yellow-400 mb-2"></div>
-                <div>COMTÉ</div>
-              </div>
+          <div className="absolute top-4 right-4 z-[400] bg-white/95 backdrop-blur-sm rounded-lg p-2 shadow-lg border">
+            <div className="w-[120px] h-[80px] bg-gray-100 rounded flex items-center justify-center border-2 border-dashed border-gray-300">
+              <span className="text-xs text-gray-500 text-center">Logo région<br/>à remplacer</span>
             </div>
           </div>
           
@@ -825,14 +785,48 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [], generatedM
             )}
           </div>
         </div>
-        <div className="mt-4 text-center">
+        <div className="mt-4 flex items-center justify-between">
           <p className="text-sm text-muted-foreground">{mapConfig.credits}</p>
-          {isEditing && (
-            <p className="text-sm text-primary mt-1">
+          <div className="flex gap-2">
+            {aiGeneratedData && (
+              <Button 
+                variant={showDataVisualization ? "default" : "outline"} 
+                size="sm" 
+                onClick={() => setShowDataVisualization(!showDataVisualization)}
+              >
+                <Palette className="h-4 w-4 mr-1" />
+                {showDataVisualization ? "Masquer données" : "Afficher données"}
+              </Button>
+            )}
+            <Button 
+              variant={isEditing ? "default" : "outline"} 
+              size="sm" 
+              onClick={toggleEditMode}
+            >
+              <Edit3 className="h-4 w-4 mr-1" />
+              {isEditing ? "Mode lecture" : "Éditer"}
+            </Button>
+            <Button variant="outline" size="sm" onClick={saveMap}>
+              <Save className="h-4 w-4 mr-1" />
+              Sauvegarder
+            </Button>
+            <Button variant="outline" size="sm" onClick={exportMap}>
+              <Download className="h-4 w-4 mr-1" />
+              Export
+            </Button>
+            <Button variant="outline" size="sm" onClick={shareMap}>
+              <Share2 className="h-4 w-4 mr-1" />
+              Partager
+            </Button>
+          </div>
+        </div>
+        {isEditing && (
+          <div className="mt-2 text-center">
+            <p className="text-sm text-primary">
               Mode édition actif - Utilisez les outils de dessin pour créer des éléments
             </p>
-          )}
-        </div>
+          </div>
+        )}
         
         {/* AI Analysis Section */}
         {aiAnalysis && (
