@@ -769,9 +769,9 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [], generatedM
             </div>
           </div>
           
-          {/* Drawing Tools Overlay - Left Side */}
-          <div className="absolute top-4 left-4 z-[400] bg-white/95 backdrop-blur-sm rounded-lg p-2 shadow-lg border">
-            <div className="flex flex-col gap-1">
+          {/* Drawing Tools Overlay - Horizontal below logo */}
+          <div className="absolute top-32 right-4 z-[400] bg-white/95 backdrop-blur-sm rounded-lg p-2 shadow-lg border">
+            <div className="flex gap-1">
               <Button 
                 variant={drawingMode === 'marker' ? "default" : "outline"} 
                 size="sm" 
