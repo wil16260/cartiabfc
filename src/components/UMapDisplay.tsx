@@ -5,7 +5,7 @@ import "leaflet/dist/leaflet.css";
 import "leaflet-draw/dist/leaflet.draw.css";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, Share2, Edit3, Check, X, Map, Layers, Palette, Save } from "lucide-react";
+import { Download, Share2, Edit3, Check, X, Map, Layers, Palette, Save, Square, Circle, MapPin, Pen, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 
@@ -60,6 +60,7 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [], generatedM
   const [isEditing, setIsEditing] = useState(false);
   const [showDataVisualization, setShowDataVisualization] = useState(true);
   const [aiAnalysis, setAiAnalysis] = useState<string>("");
+  const [drawingMode, setDrawingMode] = useState<string | null>(null);
 
   useEffect(() => {
     loadMapData();
@@ -235,49 +236,7 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [], generatedM
     const drawnItemsGroup = new L.FeatureGroup();
     leafletMap.addLayer(drawnItemsGroup);
 
-    // Drawing controls
-    const drawControl = new L.Control.Draw({
-      position: 'topright',
-      draw: {
-        polyline: {
-          shapeOptions: {
-            color: '#3b82f6',
-            weight: 3
-          }
-        },
-        polygon: {
-          allowIntersection: false,
-          drawError: {
-            color: '#e74c3c',
-            message: 'Intersection non autorisée!'
-          },
-          shapeOptions: {
-            color: '#3b82f6',
-            fillOpacity: 0.3
-          }
-        },
-        circle: {
-          shapeOptions: {
-            color: '#3b82f6',
-            fillOpacity: 0.3
-          }
-        },
-        rectangle: {
-          shapeOptions: {
-            color: '#3b82f6',
-            fillOpacity: 0.3
-          }
-        },
-        marker: {},
-        circlemarker: false
-      },
-      edit: {
-        featureGroup: drawnItemsGroup,
-        remove: true
-      }
-    });
-
-    leafletMap.addControl(drawControl);
+    // Don't add drawing controls to map - they will be in bottom attribution area
 
     // Drawing event handlers
     leafletMap.on(L.Draw.Event.CREATED, (e: any) => {
@@ -663,6 +622,58 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [], generatedM
     setIsEditingDataLabel(false);
   };
 
+  const startDrawing = (type: string) => {
+    if (!map || !drawnItems) return;
+    
+    setDrawingMode(type);
+    
+    let drawOptions: any = {
+      shapeOptions: {
+        color: '#3b82f6',
+        weight: 3,
+        fillOpacity: 0.3
+      }
+    };
+
+    // Enable drawing mode based on type
+    map.getContainer().style.cursor = 'crosshair';
+    
+    // Handle click events for drawing
+    const handleMapClick = (e: L.LeafletMouseEvent) => {
+      if (type === 'marker') {
+        const marker = L.marker(e.latlng).addTo(map);
+        drawnItems.addLayer(marker);
+        marker.bindPopup(`
+          <div class="p-2">
+            <input type="text" placeholder="Titre" class="w-full mb-2 p-1 border rounded" />
+            <textarea placeholder="Description" class="w-full mb-2 p-1 border rounded"></textarea>
+            <button class="bg-primary text-white px-2 py-1 rounded text-sm">Sauvegarder</button>
+          </div>
+        `);
+        stopDrawing();
+        toast.success("Marqueur ajouté!");
+      }
+    };
+
+    if (type === 'marker') {
+      map.once('click', handleMapClick);
+    }
+  };
+
+  const stopDrawing = () => {
+    if (!map) return;
+    setDrawingMode(null);
+    map.getContainer().style.cursor = '';
+    map.off('click');
+  };
+
+  const deleteAllDrawings = () => {
+    if (drawnItems) {
+      drawnItems.clearLayers();
+      toast.success("Tous les dessins supprimés!");
+    }
+  };
+
   const exportMap = () => {
     if (!map) return;
     
@@ -786,8 +797,58 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [], generatedM
           </div>
         </div>
         <div className="mt-4 flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">{mapConfig.credits}</p>
+          <div className="flex items-center gap-4">
+            <p className="text-sm text-muted-foreground">{mapConfig.credits}</p>
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <span>© Leaflet | © OpenStreetMap</span>
+            </div>
+          </div>
           <div className="flex gap-2">
+            {/* Drawing Tools */}
+            <div className="flex gap-1 border-r pr-2">
+              <Button 
+                variant={drawingMode === 'marker' ? "default" : "outline"} 
+                size="sm" 
+                onClick={() => drawingMode === 'marker' ? stopDrawing() : startDrawing('marker')}
+                title="Ajouter un marqueur"
+              >
+                <MapPin className="h-3 w-3" />
+              </Button>
+              <Button 
+                variant={drawingMode === 'polyline' ? "default" : "outline"} 
+                size="sm" 
+                onClick={() => drawingMode === 'polyline' ? stopDrawing() : startDrawing('polyline')}
+                title="Dessiner une ligne"
+              >
+                <Pen className="h-3 w-3" />
+              </Button>
+              <Button 
+                variant={drawingMode === 'polygon' ? "default" : "outline"} 
+                size="sm" 
+                onClick={() => drawingMode === 'polygon' ? stopDrawing() : startDrawing('polygon')}
+                title="Dessiner un polygone"
+              >
+                <Square className="h-3 w-3" />
+              </Button>
+              <Button 
+                variant={drawingMode === 'circle' ? "default" : "outline"} 
+                size="sm" 
+                onClick={() => drawingMode === 'circle' ? stopDrawing() : startDrawing('circle')}
+                title="Dessiner un cercle"
+              >
+                <Circle className="h-3 w-3" />
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={deleteAllDrawings}
+                title="Supprimer tous les dessins"
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </div>
+            
+            {/* Main Action Buttons */}
             {aiGeneratedData && (
               <Button 
                 variant={showDataVisualization ? "default" : "outline"} 
