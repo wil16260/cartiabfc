@@ -61,6 +61,7 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [], generatedM
   const [showDataVisualization, setShowDataVisualization] = useState(true);
   const [aiAnalysis, setAiAnalysis] = useState<string>("");
   const [drawingMode, setDrawingMode] = useState<string | null>(null);
+  const [mapScale, setMapScale] = useState({ distance: 20, unit: 'km', width: 100 });
 
   useEffect(() => {
     loadMapData();
@@ -265,6 +266,45 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [], generatedM
 
     setMap(leafletMap);
     setDrawnItems(drawnItemsGroup);
+    
+    // Add zoom event listener to update scale
+    leafletMap.on('zoomend moveend', updateScale);
+    updateScale(); // Initial scale calculation
+    
+    function updateScale() {
+      const zoom = leafletMap.getZoom();
+      const center = leafletMap.getCenter();
+      
+      // Calculate scale based on current zoom and position
+      const scaleWidth = 100; // pixels
+      const point1 = leafletMap.latLngToContainerPoint(center);
+      const point2 = L.point(point1.x + scaleWidth, point1.y);
+      const latlng2 = leafletMap.containerPointToLatLng(point2);
+      
+      const distance = center.distanceTo(latlng2); // distance in meters
+      
+      // Choose appropriate scale
+      let scaleDistance, unit;
+      if (distance < 1000) {
+        scaleDistance = Math.round(distance / 10) * 10;
+        unit = 'm';
+      } else if (distance < 10000) {
+        scaleDistance = Math.round(distance / 1000 * 10) / 10;
+        unit = 'km';
+      } else {
+        scaleDistance = Math.round(distance / 1000);
+        unit = 'km';
+      }
+      
+      // Calculate the actual width needed for this distance
+      const actualWidth = (scaleDistance * scaleWidth) / (unit === 'm' ? distance : distance / 1000);
+      
+      setMapScale({
+        distance: scaleDistance,
+        unit: unit,
+        width: Math.round(actualWidth)
+      });
+    }
   };
 
   const renderLayers = () => {
@@ -781,14 +821,23 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [], generatedM
           <div className="absolute bottom-12 left-2 z-[400] bg-white/90 backdrop-blur-sm rounded px-2 py-1 shadow-sm border">
             <div className="flex flex-col items-start">
               <div className="flex items-end">
-                <div className="border-b-2 border-l-2 border-gray-700 w-8 h-2"></div>
-                <div className="border-b-2 border-gray-300 w-8 h-2"></div>
-                <div className="border-b-2 border-r-2 border-gray-700 w-8 h-2"></div>
+                <div 
+                  className="border-b-2 border-l-2 border-gray-700 h-2" 
+                  style={{ width: `${mapScale.width / 3}px` }}
+                ></div>
+                <div 
+                  className="border-b-2 border-gray-300 h-2" 
+                  style={{ width: `${mapScale.width / 3}px` }}
+                ></div>
+                <div 
+                  className="border-b-2 border-r-2 border-gray-700 h-2" 
+                  style={{ width: `${mapScale.width / 3}px` }}
+                ></div>
               </div>
-              <div className="flex justify-between w-full text-xs text-gray-700 mt-1">
+              <div className="flex justify-between text-xs text-gray-700 mt-1" style={{ width: `${mapScale.width}px` }}>
                 <span>0</span>
-                <span>10</span>
-                <span>20 km</span>
+                <span>{mapScale.distance / 2}{mapScale.unit === 'm' ? 'm' : ''}</span>
+                <span>{mapScale.distance} {mapScale.unit}</span>
               </div>
             </div>
           </div>
