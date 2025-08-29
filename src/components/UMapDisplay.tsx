@@ -769,6 +769,57 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [], generatedM
             </div>
           </div>
           
+          {/* Drawing Tools Overlay - Left Side */}
+          <div className="absolute top-4 left-4 z-[400] bg-white/95 backdrop-blur-sm rounded-lg p-2 shadow-lg border">
+            <div className="flex flex-col gap-1">
+              <Button 
+                variant={drawingMode === 'marker' ? "default" : "outline"} 
+                size="sm" 
+                onClick={() => drawingMode === 'marker' ? stopDrawing() : startDrawing('marker')}
+                title="Ajouter un marqueur"
+                className="w-8 h-8 p-0"
+              >
+                <MapPin className="h-4 w-4" />
+              </Button>
+              <Button 
+                variant={drawingMode === 'polyline' ? "default" : "outline"} 
+                size="sm" 
+                onClick={() => drawingMode === 'polyline' ? stopDrawing() : startDrawing('polyline')}
+                title="Dessiner une ligne"
+                className="w-8 h-8 p-0"
+              >
+                <Pen className="h-4 w-4" />
+              </Button>
+              <Button 
+                variant={drawingMode === 'polygon' ? "default" : "outline"} 
+                size="sm" 
+                onClick={() => drawingMode === 'polygon' ? stopDrawing() : startDrawing('polygon')}
+                title="Dessiner un polygone"
+                className="w-8 h-8 p-0"
+              >
+                <Square className="h-4 w-4" />
+              </Button>
+              <Button 
+                variant={drawingMode === 'circle' ? "default" : "outline"} 
+                size="sm" 
+                onClick={() => drawingMode === 'circle' ? stopDrawing() : startDrawing('circle')}
+                title="Dessiner un cercle"
+                className="w-8 h-8 p-0"
+              >
+                <Circle className="h-4 w-4" />
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={deleteAllDrawings}
+                title="Supprimer tous les dessins"
+                className="w-8 h-8 p-0"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+          
           {/* Title Overlay - Top Center */}
           <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-[400] bg-black/60 text-white px-4 py-2 rounded-lg backdrop-blur-sm">
             {isEditingTitle ? (
@@ -804,51 +855,6 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [], generatedM
             </div>
           </div>
           <div className="flex gap-2">
-            {/* Drawing Tools */}
-            <div className="flex gap-1 border-r pr-2">
-              <Button 
-                variant={drawingMode === 'marker' ? "default" : "outline"} 
-                size="sm" 
-                onClick={() => drawingMode === 'marker' ? stopDrawing() : startDrawing('marker')}
-                title="Ajouter un marqueur"
-              >
-                <MapPin className="h-3 w-3" />
-              </Button>
-              <Button 
-                variant={drawingMode === 'polyline' ? "default" : "outline"} 
-                size="sm" 
-                onClick={() => drawingMode === 'polyline' ? stopDrawing() : startDrawing('polyline')}
-                title="Dessiner une ligne"
-              >
-                <Pen className="h-3 w-3" />
-              </Button>
-              <Button 
-                variant={drawingMode === 'polygon' ? "default" : "outline"} 
-                size="sm" 
-                onClick={() => drawingMode === 'polygon' ? stopDrawing() : startDrawing('polygon')}
-                title="Dessiner un polygone"
-              >
-                <Square className="h-3 w-3" />
-              </Button>
-              <Button 
-                variant={drawingMode === 'circle' ? "default" : "outline"} 
-                size="sm" 
-                onClick={() => drawingMode === 'circle' ? stopDrawing() : startDrawing('circle')}
-                title="Dessiner un cercle"
-              >
-                <Circle className="h-3 w-3" />
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={deleteAllDrawings}
-                title="Supprimer tous les dessins"
-              >
-                <Trash2 className="h-3 w-3" />
-              </Button>
-            </div>
-            
-            {/* Main Action Buttons */}
             {aiGeneratedData && (
               <Button 
                 variant={showDataVisualization ? "default" : "outline"} 
