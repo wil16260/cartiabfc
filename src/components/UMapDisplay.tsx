@@ -804,9 +804,11 @@ const UMapDisplay = ({ prompt, isLoading = false, visibleLayers = [], generatedM
           
           {/* Logo Overlay - Top Right */}
           <div className="absolute top-4 right-4 z-[400] bg-white/95 backdrop-blur-sm rounded-lg p-2 shadow-lg border">
-            <div className="w-[120px] h-[80px] bg-gray-100 rounded flex items-center justify-center border-2 border-dashed border-gray-300">
-              <span className="text-xs text-gray-500 text-center">Logo région<br/>à remplacer</span>
-            </div>
+            <img 
+              src="/Logo-regionCMJN.png" 
+              alt="Région Bourgogne-Franche-Comté" 
+              className="w-[120px] h-auto max-h-[80px] object-contain"
+            />
           </div>
           
           {/* North Arrow - Bottom Left Above Tools */}
