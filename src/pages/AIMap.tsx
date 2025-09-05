@@ -37,6 +37,7 @@ const AIMap = () => {
     type?: 'base' | 'ai' | 'data';
     color?: string;
     opacity?: number;
+    data?: any;
   }>>([
     { 
       id: 'base_departments', 
@@ -64,12 +65,43 @@ const AIMap = () => {
       type: 'base' as const,
       color: '#10b981',
       opacity: 0.7
+    },
+    { 
+      id: 'poi_bfc', 
+      name: 'Points d\'intérêt BFC', 
+      enabled: false, 
+      description: 'Points d\'intérêt de Bourgogne-Franche-Comté',
+      type: 'data' as const,
+      color: '#f59e0b',
+      opacity: 0.8
     }
   ]);
 
   useEffect(() => {
     fetchGeneratedMaps();
+    loadPOIData();
   }, [user]);
+
+  const loadPOIData = async () => {
+    try {
+      const response = await fetch('/data/bfc_poi.geojsonl.json');
+      const text = await response.text();
+      
+      // Parse GEOJSONL format (each line is a separate GeoJSON feature)
+      const features = text.trim().split('\n').map(line => JSON.parse(line));
+      
+      const poiGeojson = {
+        type: 'FeatureCollection',
+        features: features
+      };
+
+      setMapLayers(prev => prev.map(layer => 
+        layer.id === 'poi_bfc' ? { ...layer, data: poiGeojson } : layer
+      ));
+    } catch (error) {
+      console.error('Error loading POI data:', error);
+    }
+  };
 
   const fetchGeneratedMaps = async () => {
     if (!user) return;
