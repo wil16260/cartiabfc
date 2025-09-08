@@ -147,12 +147,9 @@ const AIMap = () => {
       console.log('Analysis result:', analysisData);
 
       console.log('Generating enhanced map with geocoding...');
-      const generateResponse = await supabase.functions.invoke('rag-enhanced-map-generation', {
+      const generateResponse = await supabase.functions.invoke('enhanced-geocoding-map-generation', {
         body: { 
-          prompt,
-          step: 1,
-          dataLevel: analysisData?.dataLevel || 'communes',
-          recommendedMapType: analysisData?.recommendedMapType || 'geocodage'
+          prompt
         }
       });
 
