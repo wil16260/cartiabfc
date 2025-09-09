@@ -51,7 +51,7 @@ const AIMap = () => {
     { 
       id: 'base_epci', 
       name: 'EPCI', 
-      enabled: false, 
+      enabled: true, 
       description: 'Établissements publics de coopération intercommunale',
       type: 'base' as const,
       color: '#8b5cf6',
@@ -60,7 +60,7 @@ const AIMap = () => {
     { 
       id: 'base_communes', 
       name: 'Communes', 
-      enabled: false, 
+      enabled: true, 
       description: 'Contours des communes',
       type: 'base' as const,
       color: '#10b981',
@@ -69,7 +69,7 @@ const AIMap = () => {
     { 
       id: 'poi_bfc', 
       name: 'Points d\'intérêt BFC', 
-      enabled: false, 
+      enabled: true, 
       description: 'Points d\'intérêt de Bourgogne-Franche-Comté',
       type: 'data' as const,
       color: '#f59e0b',
