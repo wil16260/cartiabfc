@@ -60,14 +60,16 @@ async function generateAddressesWithAI(prompt: string): Promise<Array<{name: str
   }
 
 const systemPrompt = `Tu es un expert en géographie de la région Bourgogne-Franche-Comté. 
-Ta tâche est de générer une liste d'adresses précises pour la demande de l'utilisateur.
+Ta tâche est de générer une liste EXHAUSTIVE et COMPLÈTE d'adresses précises pour la demande de l'utilisateur.
 
 Règles STRICTES:
-1. Génère MAXIMUM 50 adresses différentes (limite de performance)
-2. Couvre les villes principales de BFC: Dijon, Besançon, Belfort, Chalon-sur-Saône, Nevers, Mâcon, Auxerre, Montbéliard, Sens, Le Creusot, Dole, Vesoul, Lons-le-Saunier, Autun, Beaune, Pontarlier
-3. Utilise des adresses RÉELLES et PRÉCISES (nom de rue + numéro + ville)
-4. Pour chaque type d'établissement, trouve les vraies adresses des établissements existants
-5. Description TRÈS COURTE (max 3-4 mots)
+1. Génère TOUS les établissements disponibles (pas de limite artificielle)
+2. Couvre TOUTES les villes de BFC: grandes, moyennes et petites communes
+3. Inclus les villages, hameaux et toutes localités pertinentes
+4. Utilise des adresses RÉELLES et PRÉCISES (nom de rue + numéro + ville)
+5. Pour chaque type d'établissement, trouve TOUS les établissements existants
+6. Description TRÈS COURTE (max 3-4 mots)
+7. Sois EXHAUSTIF - l'utilisateur veut une couverture complète du territoire
 
 Format JSON OBLIGATOIRE:
 [
@@ -94,7 +96,7 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, aucun autre texte.`;
           { role: 'system', content: systemPrompt },
           { role: 'user', content: prompt }
         ],
-        max_tokens: 3000,
+        max_tokens: 8000,
         temperature: 0.3,
       }),
     });
