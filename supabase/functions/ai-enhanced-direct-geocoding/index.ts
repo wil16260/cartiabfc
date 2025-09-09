@@ -12,26 +12,41 @@ const mistralApiKey = Deno.env.get('MISTRAL_API_KEY');
 // Fallback comprehensive address lists for common requests
 const fallbackAddresses = {
   gendarmeries: [
-    { name: "Gendarmerie Dijon", address: "2 Place Suquet, 21000 Dijon", description: "Brigade territoriale de gendarmerie", category: "Forces de l'ordre" },
-    { name: "Gendarmerie Besançon", address: "8 Avenue de la Gare d'Eau, 25000 Besançon", description: "Brigade territoriale de gendarmerie", category: "Forces de l'ordre" },
-    { name: "Gendarmerie Belfort", address: "2 Rue du Général Bourgeois, 90000 Belfort", description: "Brigade territoriale de gendarmerie", category: "Forces de l'ordre" },
-    { name: "Gendarmerie Chalon-sur-Saône", address: "12 Rue de la Préfecture, 71100 Chalon-sur-Saône", description: "Brigade territoriale de gendarmerie", category: "Forces de l'ordre" },
-    { name: "Gendarmerie Nevers", address: "22 Rue du Général de Gaulle, 58000 Nevers", description: "Brigade territoriale de gendarmerie", category: "Forces de l'ordre" },
-    { name: "Gendarmerie Mâcon", address: "Avenue de la Gendarmerie, 71850 Charnay-lès-Mâcon", description: "Brigade territoriale de gendarmerie", category: "Forces de l'ordre" },
-    { name: "Gendarmerie Auxerre", address: "5 Boulevard Vauban, 89000 Auxerre", description: "Brigade territoriale de gendarmerie", category: "Forces de l'ordre" },
-    { name: "Gendarmerie Montbéliard", address: "15 Rue Cuvier, 25200 Montbéliard", description: "Brigade territoriale de gendarmerie", category: "Forces de l'ordre" },
-    { name: "Gendarmerie Sens", address: "4 Avenue du Général Leclerc, 89100 Sens", description: "Brigade territoriale de gendarmerie", category: "Forces de l'ordre" },
-    { name: "Gendarmerie Le Creusot", address: "3 Place du Théâtre, 71200 Le Creusot", description: "Brigade territoriale de gendarmerie", category: "Forces de l'ordre" },
-    { name: "Gendarmerie Dole", address: "12 Rue Boyvin, 39100 Dole", description: "Brigade territoriale de gendarmerie", category: "Forces de l'ordre" },
-    { name: "Gendarmerie Vesoul", address: "4 Rue Paul Morel, 70000 Vesoul", description: "Brigade territoriale de gendarmerie", category: "Forces de l'ordre" },
-    { name: "Gendarmerie Lons-le-Saunier", address: "455 Avenue Jean Jaurès, 39000 Lons-le-Saunier", description: "Brigade territoriale de gendarmerie", category: "Forces de l'ordre" },
-    { name: "Gendarmerie Autun", address: "20 Avenue Charles de Gaulle, 71400 Autun", description: "Brigade territoriale de gendarmerie", category: "Forces de l'ordre" },
-    { name: "Gendarmerie Beaune", address: "26 Faubourg Madeleine, 21200 Beaune", description: "Brigade territoriale de gendarmerie", category: "Forces de l'ordre" },
-    { name: "Gendarmerie Pontarlier", address: "2 Rue de la République, 25300 Pontarlier", description: "Brigade territoriale de gendarmerie", category: "Forces de l'ordre" },
-    { name: "Gendarmerie Moulins", address: "8 Rue Achille Roche, 03000 Moulins", description: "Brigade territoriale de gendarmerie", category: "Forces de l'ordre" },
-    { name: "Gendarmerie Châlon-sur-Saône", address: "Boulevard de la République, 71100 Chalon-sur-Saône", description: "Brigade territoriale de gendarmerie", category: "Forces de l'ordre" },
-    { name: "Gendarmerie Avallon", address: "6 Rue de Lyon, 89200 Avallon", description: "Brigade territoriale de gendarmerie", category: "Forces de l'ordre" },
-    { name: "Gendarmerie Clamecy", address: "4 Avenue de la République, 58500 Clamecy", description: "Brigade territoriale de gendarmerie", category: "Forces de l'ordre" }
+    { name: "Gendarmerie Dijon", address: "2 Place Suquet, 21000 Dijon", description: "Brigade territoriale", category: "Forces de l'ordre" },
+    { name: "Gendarmerie Besançon", address: "8 Avenue de la Gare d'Eau, 25000 Besançon", description: "Brigade territoriale", category: "Forces de l'ordre" },
+    { name: "Gendarmerie Belfort", address: "2 Rue du Général Bourgeois, 90000 Belfort", description: "Brigade territoriale", category: "Forces de l'ordre" },
+    { name: "Gendarmerie Chalon-sur-Saône", address: "12 Rue de la Préfecture, 71100 Chalon-sur-Saône", description: "Brigade territoriale", category: "Forces de l'ordre" },
+    { name: "Gendarmerie Nevers", address: "22 Rue du Général de Gaulle, 58000 Nevers", description: "Brigade territoriale", category: "Forces de l'ordre" },
+    { name: "Gendarmerie Mâcon", address: "Avenue de la Gendarmerie, 71850 Charnay-lès-Mâcon", description: "Brigade territoriale", category: "Forces de l'ordre" },
+    { name: "Gendarmerie Auxerre", address: "5 Boulevard Vauban, 89000 Auxerre", description: "Brigade territoriale", category: "Forces de l'ordre" },
+    { name: "Gendarmerie Montbéliard", address: "15 Rue Cuvier, 25200 Montbéliard", description: "Brigade territoriale", category: "Forces de l'ordre" },
+    { name: "Gendarmerie Sens", address: "4 Avenue du Général Leclerc, 89100 Sens", description: "Brigade territoriale", category: "Forces de l'ordre" },
+    { name: "Gendarmerie Le Creusot", address: "3 Place du Théâtre, 71200 Le Creusot", description: "Brigade territoriale", category: "Forces de l'ordre" },
+    { name: "Gendarmerie Dole", address: "12 Rue Boyvin, 39100 Dole", description: "Brigade territoriale", category: "Forces de l'ordre" },
+    { name: "Gendarmerie Vesoul", address: "4 Rue Paul Morel, 70000 Vesoul", description: "Brigade territoriale", category: "Forces de l'ordre" },
+    { name: "Gendarmerie Lons-le-Saunier", address: "455 Avenue Jean Jaurès, 39000 Lons-le-Saunier", description: "Brigade territoriale", category: "Forces de l'ordre" },
+    { name: "Gendarmerie Autun", address: "20 Avenue Charles de Gaulle, 71400 Autun", description: "Brigade territoriale", category: "Forces de l'ordre" },
+    { name: "Gendarmerie Beaune", address: "26 Faubourg Madeleine, 21200 Beaune", description: "Brigade territoriale", category: "Forces de l'ordre" },
+    { name: "Gendarmerie Pontarlier", address: "2 Rue de la République, 25300 Pontarlier", description: "Brigade territoriale", category: "Forces de l'ordre" },
+    { name: "Gendarmerie Moulins", address: "8 Rue Achille Roche, 03000 Moulins", description: "Brigade territoriale", category: "Forces de l'ordre" },
+    { name: "Gendarmerie Châlon-sur-Saône", address: "Boulevard de la République, 71100 Chalon-sur-Saône", description: "Brigade territoriale", category: "Forces de l'ordre" },
+    { name: "Gendarmerie Avallon", address: "6 Rue de Lyon, 89200 Avallon", description: "Brigade territoriale", category: "Forces de l'ordre" },
+    { name: "Gendarmerie Clamecy", address: "4 Avenue de la République, 58500 Clamecy", description: "Brigade territoriale", category: "Forces de l'ordre" },
+    { name: "Gendarmerie Poligny", address: "15 Rue du Commerce, 39800 Poligny", description: "Brigade territoriale", category: "Forces de l'ordre" },
+    { name: "Gendarmerie Gray", address: "8 Place Charles de Gaulle, 70100 Gray", description: "Brigade territoriale", category: "Forces de l'ordre" },
+    { name: "Gendarmerie Louhans", address: "12 Rue Alsace-Lorraine, 71500 Louhans", description: "Brigade territoriale", category: "Forces de l'ordre" },
+    { name: "Gendarmerie Bourbon-Lancy", address: "5 Avenue de la République, 71140 Bourbon-Lancy", description: "Brigade territoriale", category: "Forces de l'ordre" },
+    { name: "Gendarmerie Digoin", address: "18 Rue Nationale, 71160 Digoin", description: "Brigade territoriale", category: "Forces de l'ordre" },
+    { name: "Gendarmerie Paray-le-Monial", address: "3 Boulevard Saint-Paul, 71600 Paray-le-Monial", description: "Brigade territoriale", category: "Forces de l'ordre" },
+    { name: "Gendarmerie Gueugnon", address: "22 Rue République, 71130 Gueugnon", description: "Brigade territoriale", category: "Forces de l'ordre" },
+    { name: "Gendarmerie Saint-Vallier", address: "7 Place de la Mairie, 71230 Saint-Vallier", description: "Brigade territoriale", category: "Forces de l'ordre" },
+    { name: "Gendarmerie Ornans", address: "1 Rue Jacques Gervais, 25290 Ornans", description: "Brigade territoriale", category: "Forces de l'ordre" },
+    { name: "Gendarmerie Morteau", address: "12 Rue de la Gare, 25500 Morteau", description: "Brigade territoriale", category: "Forces de l'ordre" },
+    { name: "Gendarmerie Valdahon", address: "8 Grande Rue, 25800 Valdahon", description: "Brigade territoriale", category: "Forces de l'ordre" },
+    { name: "Gendarmerie Champagnole", address: "5 Rue Baronne Delort, 39300 Champagnole", description: "Brigade territoriale", category: "Forces de l'ordre" },
+    { name: "Gendarmerie Saint-Claude", address: "15 Rue du Pré, 39200 Saint-Claude", description: "Brigade territoriale", category: "Forces de l'ordre" },
+    { name: "Gendarmerie Tonnerre", address: "3 Avenue de la Gare, 89700 Tonnerre", description: "Brigade territoriale", category: "Forces de l'ordre" },
+    { name: "Gendarmerie Joigny", address: "12 Rue Cortel, 89300 Joigny", description: "Brigade territoriale", category: "Forces de l'ordre" }
   ]
 };
 
@@ -44,22 +59,23 @@ async function generateAddressesWithAI(prompt: string): Promise<Array<{name: str
     return fallbackAddresses.gendarmeries;
   }
 
-  const systemPrompt = `Tu es un expert en géographie de la région Bourgogne-Franche-Comté. 
+const systemPrompt = `Tu es un expert en géographie de la région Bourgogne-Franche-Comté. 
 Ta tâche est de générer une liste EXHAUSTIVE d'adresses précises pour la demande de l'utilisateur.
 
 Règles STRICTES:
-1. Génère AU MINIMUM 15-20 adresses différentes
-2. Couvre TOUTES les villes principales de BFC: Dijon, Besançon, Belfort, Chalon-sur-Saône, Nevers, Mâcon, Auxerre, Montbéliard, Sens, Le Creusot, Dole, Vesoul, Lons-le-Saunier, Autun, Beaune, Pontarlier, etc.
+1. Génère AU MINIMUM 30-40 adresses différentes
+2. Couvre TOUTES les villes de BFC: Dijon, Besançon, Belfort, Chalon-sur-Saône, Nevers, Mâcon, Auxerre, Montbéliard, Sens, Le Creusot, Dole, Vesoul, Lons-le-Saunier, Autun, Beaune, Pontarlier, Poligny, Gray, Louhans, Bourbon-Lancy, Digoin, Paray-le-Monial, Gueugnon, Saint-Vallier, Ornans, Morteau, Valdahon, etc.
 3. Utilise des adresses RÉELLES et PRÉCISES (nom de rue + numéro + ville)
 4. Pour chaque type d'établissement, trouve les vraies adresses des établissements existants
-5. Varie les types d'établissements selon la demande
+5. Inclus les petites et moyennes villes, pas seulement les grandes
+6. Description TRÈS COURTE (max 3-4 mots)
 
 Format JSON OBLIGATOIRE:
 [
   {
     "name": "Nom précis de l'établissement",
     "address": "Numéro rue précise, Code postal Ville",
-    "description": "Description détaillée",
+    "description": "Courte description",
     "category": "Catégorie"
   }
 ]
@@ -79,7 +95,7 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, aucun autre texte.`;
           { role: 'system', content: systemPrompt },
           { role: 'user', content: prompt }
         ],
-        max_tokens: 2000,
+        max_tokens: 3000,
         temperature: 0.3,
       }),
     });
