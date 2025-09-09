@@ -19,34 +19,7 @@ const fallbackAddresses = {
     { name: "Gendarmerie Nevers", address: "22 Rue du Général de Gaulle, 58000 Nevers", description: "Brigade territoriale", category: "Forces de l'ordre" },
     { name: "Gendarmerie Mâcon", address: "Avenue de la Gendarmerie, 71850 Charnay-lès-Mâcon", description: "Brigade territoriale", category: "Forces de l'ordre" },
     { name: "Gendarmerie Auxerre", address: "5 Boulevard Vauban, 89000 Auxerre", description: "Brigade territoriale", category: "Forces de l'ordre" },
-    { name: "Gendarmerie Montbéliard", address: "15 Rue Cuvier, 25200 Montbéliard", description: "Brigade territoriale", category: "Forces de l'ordre" },
-    { name: "Gendarmerie Sens", address: "4 Avenue du Général Leclerc, 89100 Sens", description: "Brigade territoriale", category: "Forces de l'ordre" },
-    { name: "Gendarmerie Le Creusot", address: "3 Place du Théâtre, 71200 Le Creusot", description: "Brigade territoriale", category: "Forces de l'ordre" },
-    { name: "Gendarmerie Dole", address: "12 Rue Boyvin, 39100 Dole", description: "Brigade territoriale", category: "Forces de l'ordre" },
-    { name: "Gendarmerie Vesoul", address: "4 Rue Paul Morel, 70000 Vesoul", description: "Brigade territoriale", category: "Forces de l'ordre" },
-    { name: "Gendarmerie Lons-le-Saunier", address: "455 Avenue Jean Jaurès, 39000 Lons-le-Saunier", description: "Brigade territoriale", category: "Forces de l'ordre" },
-    { name: "Gendarmerie Autun", address: "20 Avenue Charles de Gaulle, 71400 Autun", description: "Brigade territoriale", category: "Forces de l'ordre" },
-    { name: "Gendarmerie Beaune", address: "26 Faubourg Madeleine, 21200 Beaune", description: "Brigade territoriale", category: "Forces de l'ordre" },
-    { name: "Gendarmerie Pontarlier", address: "2 Rue de la République, 25300 Pontarlier", description: "Brigade territoriale", category: "Forces de l'ordre" },
-    { name: "Gendarmerie Moulins", address: "8 Rue Achille Roche, 03000 Moulins", description: "Brigade territoriale", category: "Forces de l'ordre" },
-    { name: "Gendarmerie Châlon-sur-Saône", address: "Boulevard de la République, 71100 Chalon-sur-Saône", description: "Brigade territoriale", category: "Forces de l'ordre" },
-    { name: "Gendarmerie Avallon", address: "6 Rue de Lyon, 89200 Avallon", description: "Brigade territoriale", category: "Forces de l'ordre" },
-    { name: "Gendarmerie Clamecy", address: "4 Avenue de la République, 58500 Clamecy", description: "Brigade territoriale", category: "Forces de l'ordre" },
-    { name: "Gendarmerie Poligny", address: "15 Rue du Commerce, 39800 Poligny", description: "Brigade territoriale", category: "Forces de l'ordre" },
-    { name: "Gendarmerie Gray", address: "8 Place Charles de Gaulle, 70100 Gray", description: "Brigade territoriale", category: "Forces de l'ordre" },
-    { name: "Gendarmerie Louhans", address: "12 Rue Alsace-Lorraine, 71500 Louhans", description: "Brigade territoriale", category: "Forces de l'ordre" },
-    { name: "Gendarmerie Bourbon-Lancy", address: "5 Avenue de la République, 71140 Bourbon-Lancy", description: "Brigade territoriale", category: "Forces de l'ordre" },
-    { name: "Gendarmerie Digoin", address: "18 Rue Nationale, 71160 Digoin", description: "Brigade territoriale", category: "Forces de l'ordre" },
-    { name: "Gendarmerie Paray-le-Monial", address: "3 Boulevard Saint-Paul, 71600 Paray-le-Monial", description: "Brigade territoriale", category: "Forces de l'ordre" },
-    { name: "Gendarmerie Gueugnon", address: "22 Rue République, 71130 Gueugnon", description: "Brigade territoriale", category: "Forces de l'ordre" },
-    { name: "Gendarmerie Saint-Vallier", address: "7 Place de la Mairie, 71230 Saint-Vallier", description: "Brigade territoriale", category: "Forces de l'ordre" },
-    { name: "Gendarmerie Ornans", address: "1 Rue Jacques Gervais, 25290 Ornans", description: "Brigade territoriale", category: "Forces de l'ordre" },
-    { name: "Gendarmerie Morteau", address: "12 Rue de la Gare, 25500 Morteau", description: "Brigade territoriale", category: "Forces de l'ordre" },
-    { name: "Gendarmerie Valdahon", address: "8 Grande Rue, 25800 Valdahon", description: "Brigade territoriale", category: "Forces de l'ordre" },
-    { name: "Gendarmerie Champagnole", address: "5 Rue Baronne Delort, 39300 Champagnole", description: "Brigade territoriale", category: "Forces de l'ordre" },
-    { name: "Gendarmerie Saint-Claude", address: "15 Rue du Pré, 39200 Saint-Claude", description: "Brigade territoriale", category: "Forces de l'ordre" },
-    { name: "Gendarmerie Tonnerre", address: "3 Avenue de la Gare, 89700 Tonnerre", description: "Brigade territoriale", category: "Forces de l'ordre" },
-    { name: "Gendarmerie Joigny", address: "12 Rue Cortel, 89300 Joigny", description: "Brigade territoriale", category: "Forces de l'ordre" }
+    { name: "Gendarmerie Montbéliard", address: "15 Rue Cuvier, 25200 Montbéliard", description: "Brigade territoriale", category: "Forces de l'ordre" }
   ]
 };
 
@@ -90,16 +63,14 @@ async function generateAddressesWithAI(prompt: string): Promise<Array<{name: str
   }
 
 const systemPrompt = `Tu es un expert en géographie de la région Bourgogne-Franche-Comté. 
-Ta tâche est de générer une liste EXHAUSTIVE et COMPLÈTE d'adresses précises pour la demande de l'utilisateur.
+Ta tâche est de générer une liste RESTREINTE d'adresses précises pour la demande de l'utilisateur.
 
 Règles STRICTES:
-1. Génère TOUS les établissements disponibles (pas de limite artificielle)
-2. Couvre TOUTES les villes de BFC: grandes, moyennes et petites communes
-3. Inclus les villages, hameaux et toutes localités pertinentes
-4. Utilise des adresses RÉELLES et PRÉCISES (nom de rue + numéro + ville)
-5. Pour chaque type d'établissement, trouve TOUS les établissements existants
-6. Description TRÈS COURTE (max 3-4 mots)
-7. Sois EXHAUSTIF - l'utilisateur veut une couverture complète du territoire
+1. Génère MAXIMUM 8 établissements (optimisation performance)
+2. Priorité aux grandes villes de BFC: Dijon, Besançon, Belfort, Chalon-sur-Saône, Nevers, Mâcon
+3. Utilise des adresses RÉELLES et PRÉCISES (nom de rue + numéro + ville)
+4. Description TRÈS COURTE (max 3-4 mots)
+5. Qualité plutôt que quantité - sélectionne les plus importants
 
 Format JSON OBLIGATOIRE:
 [
@@ -121,13 +92,13 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, aucun autre texte.`;
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'mistral-large-latest',
+        model: 'mistral-small-latest',
         messages: [
-          { role: 'system', content: systemPrompt },
+          { role: 'system', content: systemPrompt + " IMPORTANT: Maximum 8 locations only." },
           { role: 'user', content: prompt }
         ],
-        max_tokens: 8000,
-        temperature: 0.3,
+        max_tokens: 1500,
+        temperature: 0.1,
       }),
     });
 
@@ -190,21 +161,14 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, aucun autre texte.`;
 function generateBasicFallback(prompt: string): Array<{name: string, address: string, description: string, category: string}> {
   const lowerPrompt = prompt.toLowerCase();
   
-  // Generate basic addresses for major cities in BFC
+  // Generate basic addresses for major cities in BFC (reduced to top 6 cities)
   const majorCities = [
     { name: "Dijon", postal: "21000", dept: "Côte-d'Or" },
     { name: "Besançon", postal: "25000", dept: "Doubs" },
     { name: "Belfort", postal: "90000", dept: "Territoire de Belfort" },
     { name: "Chalon-sur-Saône", postal: "71100", dept: "Saône-et-Loire" },
     { name: "Nevers", postal: "58000", dept: "Nièvre" },
-    { name: "Mâcon", postal: "71000", dept: "Saône-et-Loire" },
-    { name: "Auxerre", postal: "89000", dept: "Yonne" },
-    { name: "Montbéliard", postal: "25200", dept: "Doubs" },
-    { name: "Sens", postal: "89100", dept: "Yonne" },
-    { name: "Le Creusot", postal: "71200", dept: "Saône-et-Loire" },
-    { name: "Dole", postal: "39100", dept: "Jura" },
-    { name: "Vesoul", postal: "70000", dept: "Haute-Saône" },
-    { name: "Lons-le-Saunier", postal: "39000", dept: "Jura" }
+    { name: "Mâcon", postal: "71000", dept: "Saône-et-Loire" }
   ];
 
   return majorCities.map(city => ({
