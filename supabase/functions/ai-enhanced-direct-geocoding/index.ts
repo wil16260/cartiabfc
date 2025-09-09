@@ -63,14 +63,16 @@ async function generateAddressesWithAI(prompt: string): Promise<Array<{name: str
   }
 
 const systemPrompt = `Tu es un expert en géographie de la région Bourgogne-Franche-Comté. 
-Ta tâche est de générer une liste RESTREINTE d'adresses précises pour la demande de l'utilisateur.
+Ta tâche est de générer une liste COMPLÈTE d'adresses précises pour la demande de l'utilisateur.
 
 Règles STRICTES:
-1. Génère MAXIMUM 8 établissements (optimisation performance)
-2. Priorité aux grandes villes de BFC: Dijon, Besançon, Belfort, Chalon-sur-Saône, Nevers, Mâcon
-3. Utilise des adresses RÉELLES et PRÉCISES (nom de rue + numéro + ville)
-4. Description TRÈS COURTE (max 3-4 mots)
-5. Qualité plutôt que quantité - sélectionne les plus importants
+1. Génère TOUS les établissements disponibles (sera traité par batch)
+2. Couvre TOUTES les villes de BFC: grandes, moyennes et petites communes
+3. Inclus les villages, hameaux et toutes localités pertinentes
+4. Utilise des adresses RÉELLES et PRÉCISES (nom de rue + numéro + ville)
+5. Pour chaque type d'établissement, trouve TOUS les établissements existants
+6. Description TRÈS COURTE (max 3-4 mots)
+7. Sois EXHAUSTIF - l'utilisateur veut une couverture complète du territoire
 
 Format JSON OBLIGATOIRE:
 [
@@ -92,13 +94,13 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, aucun autre texte.`;
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'mistral-small-latest',
+        model: 'mistral-large-latest',
         messages: [
-          { role: 'system', content: systemPrompt + " IMPORTANT: Maximum 8 locations only." },
+          { role: 'system', content: systemPrompt },
           { role: 'user', content: prompt }
         ],
-        max_tokens: 1500,
-        temperature: 0.1,
+        max_tokens: 8000,
+        temperature: 0.3,
       }),
     });
 
@@ -334,31 +336,34 @@ serve(async (req) => {
       }
     }
 
-    console.log(`Successfully geocoded ${geocodedFeatures.length} out of ${aiGeneratedLocations.length} locations`);
+    console.log(`Successfully geocoded ${allGeocodedFeatures.length} out of ${aiGeneratedLocations.length} locations`);
     if (failedGeocoding.length > 0) {
       console.log(`Failed geocoding for: ${failedGeocoding.join(', ')}`);
     }
 
-    // Create final GeoJSON
+    // Create final merged GeoJSON
     const finalGeoJSON = {
       type: "FeatureCollection",
       title: `Carte: ${prompt}`,
-      description: `Carte générée avec IA et géocodage français: "${prompt}"`,
+      description: `Carte générée avec IA et géocodage français en batches: "${prompt}"`,
       metadata: {
         generatedAt: new Date().toISOString(),
         geocodingSource: "api-adresse.data.gouv.fr",
         aiModel: "mistral-large-latest",
-        totalFeatures: geocodedFeatures.length,
+        totalFeatures: allGeocodedFeatures.length,
         totalGenerated: aiGeneratedLocations.length,
-        successRate: `${Math.round((geocodedFeatures.length / aiGeneratedLocations.length) * 100)}%`,
+        successRate: `${Math.round((allGeocodedFeatures.length / aiGeneratedLocations.length) * 100)}%`,
         region: "France",
         prompt: prompt,
-        failedGeocoding: failedGeocoding
+        failedGeocoding: failedGeocoding,
+        processingMethod: "batch",
+        batchSize: BATCH_SIZE,
+        totalBatches: Math.ceil(aiGeneratedLocations.length / BATCH_SIZE)
       },
-      features: geocodedFeatures
+      features: allGeocodedFeatures
     };
 
-    console.log(`Generated GeoJSON with ${geocodedFeatures.length} geocoded features`);
+    console.log(`Generated merged GeoJSON with ${allGeocodedFeatures.length} geocoded features from all batches`);
 
     // Save to database
     try {
@@ -386,9 +391,11 @@ serve(async (req) => {
         execution_time_ms: Date.now() - new Date().getTime(),
         raw_ai_response: JSON.stringify({
           aiGenerated: aiGeneratedLocations.length,
-          geocoded: geocodedFeatures.length,
+          geocoded: allGeocodedFeatures.length,
           failed: failedGeocoding,
-          successRate: `${Math.round((geocodedFeatures.length / aiGeneratedLocations.length) * 100)}%`
+          successRate: `${Math.round((allGeocodedFeatures.length / aiGeneratedLocations.length) * 100)}%`,
+          batchProcessing: true,
+          batchSize: BATCH_SIZE
         })
       });
     } catch (logError) {
