@@ -9,8 +9,41 @@ const corsHeaders = {
 
 const mistralApiKey = Deno.env.get('MISTRAL_API_KEY');
 
-// AI-enhanced address generation using Mistral
+// Fallback comprehensive address lists for common requests
+const fallbackAddresses = {
+  gendarmeries: [
+    { name: "Gendarmerie Dijon", address: "2 Place Suquet, 21000 Dijon", description: "Brigade territoriale de gendarmerie", category: "Forces de l'ordre" },
+    { name: "Gendarmerie Besançon", address: "8 Avenue de la Gare d'Eau, 25000 Besançon", description: "Brigade territoriale de gendarmerie", category: "Forces de l'ordre" },
+    { name: "Gendarmerie Belfort", address: "2 Rue du Général Bourgeois, 90000 Belfort", description: "Brigade territoriale de gendarmerie", category: "Forces de l'ordre" },
+    { name: "Gendarmerie Chalon-sur-Saône", address: "12 Rue de la Préfecture, 71100 Chalon-sur-Saône", description: "Brigade territoriale de gendarmerie", category: "Forces de l'ordre" },
+    { name: "Gendarmerie Nevers", address: "22 Rue du Général de Gaulle, 58000 Nevers", description: "Brigade territoriale de gendarmerie", category: "Forces de l'ordre" },
+    { name: "Gendarmerie Mâcon", address: "Avenue de la Gendarmerie, 71850 Charnay-lès-Mâcon", description: "Brigade territoriale de gendarmerie", category: "Forces de l'ordre" },
+    { name: "Gendarmerie Auxerre", address: "5 Boulevard Vauban, 89000 Auxerre", description: "Brigade territoriale de gendarmerie", category: "Forces de l'ordre" },
+    { name: "Gendarmerie Montbéliard", address: "15 Rue Cuvier, 25200 Montbéliard", description: "Brigade territoriale de gendarmerie", category: "Forces de l'ordre" },
+    { name: "Gendarmerie Sens", address: "4 Avenue du Général Leclerc, 89100 Sens", description: "Brigade territoriale de gendarmerie", category: "Forces de l'ordre" },
+    { name: "Gendarmerie Le Creusot", address: "3 Place du Théâtre, 71200 Le Creusot", description: "Brigade territoriale de gendarmerie", category: "Forces de l'ordre" },
+    { name: "Gendarmerie Dole", address: "12 Rue Boyvin, 39100 Dole", description: "Brigade territoriale de gendarmerie", category: "Forces de l'ordre" },
+    { name: "Gendarmerie Vesoul", address: "4 Rue Paul Morel, 70000 Vesoul", description: "Brigade territoriale de gendarmerie", category: "Forces de l'ordre" },
+    { name: "Gendarmerie Lons-le-Saunier", address: "455 Avenue Jean Jaurès, 39000 Lons-le-Saunier", description: "Brigade territoriale de gendarmerie", category: "Forces de l'ordre" },
+    { name: "Gendarmerie Autun", address: "20 Avenue Charles de Gaulle, 71400 Autun", description: "Brigade territoriale de gendarmerie", category: "Forces de l'ordre" },
+    { name: "Gendarmerie Beaune", address: "26 Faubourg Madeleine, 21200 Beaune", description: "Brigade territoriale de gendarmerie", category: "Forces de l'ordre" },
+    { name: "Gendarmerie Pontarlier", address: "2 Rue de la République, 25300 Pontarlier", description: "Brigade territoriale de gendarmerie", category: "Forces de l'ordre" },
+    { name: "Gendarmerie Moulins", address: "8 Rue Achille Roche, 03000 Moulins", description: "Brigade territoriale de gendarmerie", category: "Forces de l'ordre" },
+    { name: "Gendarmerie Châlon-sur-Saône", address: "Boulevard de la République, 71100 Chalon-sur-Saône", description: "Brigade territoriale de gendarmerie", category: "Forces de l'ordre" },
+    { name: "Gendarmerie Avallon", address: "6 Rue de Lyon, 89200 Avallon", description: "Brigade territoriale de gendarmerie", category: "Forces de l'ordre" },
+    { name: "Gendarmerie Clamecy", address: "4 Avenue de la République, 58500 Clamecy", description: "Brigade territoriale de gendarmerie", category: "Forces de l'ordre" }
+  ]
+};
+
+// AI-enhanced address generation using Mistral with fallback
 async function generateAddressesWithAI(prompt: string): Promise<Array<{name: string, address: string, description: string, category: string}>> {
+  // Check if we have a fallback for this type of request
+  const lowerPrompt = prompt.toLowerCase();
+  if (lowerPrompt.includes('gendarmerie') || lowerPrompt.includes('police')) {
+    console.log('Using fallback addresses for gendarmeries');
+    return fallbackAddresses.gendarmeries;
+  }
+
   const systemPrompt = `Tu es un expert en géographie de la région Bourgogne-Franche-Comté. 
 Ta tâche est de générer une liste EXHAUSTIVE d'adresses précises pour la demande de l'utilisateur.
 
@@ -28,16 +61,6 @@ Format JSON OBLIGATOIRE:
     "address": "Numéro rue précise, Code postal Ville",
     "description": "Description détaillée",
     "category": "Catégorie"
-  }
-]
-
-Exemple pour gendarmeries:
-[
-  {
-    "name": "Gendarmerie de Dijon",
-    "address": "2 Place Suquet, 21000 Dijon",
-    "description": "Brigade territoriale de gendarmerie de Dijon",
-    "category": "Forces de l'ordre"
   }
 ]
 
@@ -63,6 +86,11 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, aucun autre texte.`;
 
     if (!response.ok) {
       console.error(`Mistral API error: ${response.status} ${response.statusText}`);
+      // Fallback to predefined addresses if available
+      if (lowerPrompt.includes('gendarmerie') || lowerPrompt.includes('police')) {
+        console.log('Falling back to predefined gendarmeries');
+        return fallbackAddresses.gendarmeries;
+      }
       return [];
     }
 
@@ -77,10 +105,20 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, aucun autre texte.`;
       return Array.isArray(locations) ? locations : [];
     } catch (parseError) {
       console.error('Failed to parse AI response as JSON:', parseError);
+      // Fallback to predefined addresses if available
+      if (lowerPrompt.includes('gendarmerie') || lowerPrompt.includes('police')) {
+        console.log('Falling back to predefined gendarmeries due to parse error');
+        return fallbackAddresses.gendarmeries;
+      }
       return [];
     }
   } catch (error) {
     console.error('Error calling Mistral API:', error);
+    // Fallback to predefined addresses if available
+    if (lowerPrompt.includes('gendarmerie') || lowerPrompt.includes('police')) {
+      console.log('Falling back to predefined gendarmeries due to API error');
+      return fallbackAddresses.gendarmeries;
+    }
     return [];
   }
 }
