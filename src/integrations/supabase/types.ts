@@ -349,6 +349,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      debug_current_user: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       get_active_ai_config: {
         Args: Record<PropertyKey, never>
         Returns: {

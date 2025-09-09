@@ -38,42 +38,12 @@ const Admin = () => {
 
   const fetchAiConfigs = async () => {
     try {
-      console.log('Fetching AI configs...');
-      console.log('User:', user);
-      console.log('IsAdmin:', isAdmin);
-      
-      // Use service role key for admin operations if available, otherwise use regular query
       const { data, error } = await supabase
         .from('ai_config')
         .select('id, model_name, api_key_name, system_prompt, is_active, created_at')
         .order('created_at', { ascending: false });
       
-      console.log('AI Config query result:', { data, error });
-      
-      if (error) {
-        console.error('AI Config fetch error:', error);
-        // If there's an RLS error and user is admin in frontend, try alternative approach
-        if (error.code === 'PGRST116' && isAdmin) {
-          console.log('Attempting alternative fetch method...');
-          // Use the get_active_ai_config function as fallback
-          const { data: activeData, error: activeError } = await supabase
-            .rpc('get_active_ai_config');
-          
-          if (activeError) {
-            throw activeError;
-          }
-          
-          if (activeData && activeData.length > 0) {
-            // Set a minimal config to avoid total failure
-            const activeConfig = activeData[0];
-            setAiConfigs([activeConfig]);
-            setSelectedConfig(activeConfig);
-            setSystemPrompt("");
-            return;
-          }
-        }
-        throw error;
-      }
+      if (error) throw error;
       
       setAiConfigs(data || []);
       const activeConfig = data?.find(config => config.is_active);
