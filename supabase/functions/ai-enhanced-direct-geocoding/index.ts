@@ -32,6 +32,12 @@ async function generateAddressesWithAI(prompt: string): Promise<Array<{name: str
     return fallbackAddresses.gendarmeries;
   }
 
+  // Check if Mistral API key is available
+  if (!mistralApiKey) {
+    console.log('Mistral API key not available, using fallback');
+    return generateBasicFallback(prompt);
+  }
+
   // Add more comprehensive fallbacks for common requests
   if (lowerPrompt.includes('préfecture') || lowerPrompt.includes('prefecture')) {
     console.log('Using fallback for prefectures - generating comprehensive list');
