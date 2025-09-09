@@ -60,15 +60,14 @@ async function generateAddressesWithAI(prompt: string): Promise<Array<{name: str
   }
 
 const systemPrompt = `Tu es un expert en géographie de la région Bourgogne-Franche-Comté. 
-Ta tâche est de générer une liste EXHAUSTIVE d'adresses précises pour la demande de l'utilisateur.
+Ta tâche est de générer une liste d'adresses précises pour la demande de l'utilisateur.
 
 Règles STRICTES:
-1. Génère AU MINIMUM 30-40 adresses différentes
-2. Couvre TOUTES les villes de BFC: Dijon, Besançon, Belfort, Chalon-sur-Saône, Nevers, Mâcon, Auxerre, Montbéliard, Sens, Le Creusot, Dole, Vesoul, Lons-le-Saunier, Autun, Beaune, Pontarlier, Poligny, Gray, Louhans, Bourbon-Lancy, Digoin, Paray-le-Monial, Gueugnon, Saint-Vallier, Ornans, Morteau, Valdahon, etc.
+1. Génère MAXIMUM 50 adresses différentes (limite de performance)
+2. Couvre les villes principales de BFC: Dijon, Besançon, Belfort, Chalon-sur-Saône, Nevers, Mâcon, Auxerre, Montbéliard, Sens, Le Creusot, Dole, Vesoul, Lons-le-Saunier, Autun, Beaune, Pontarlier
 3. Utilise des adresses RÉELLES et PRÉCISES (nom de rue + numéro + ville)
 4. Pour chaque type d'établissement, trouve les vraies adresses des établissements existants
-5. Inclus les petites et moyennes villes, pas seulement les grandes
-6. Description TRÈS COURTE (max 3-4 mots)
+5. Description TRÈS COURTE (max 3-4 mots)
 
 Format JSON OBLIGATOIRE:
 [
@@ -211,9 +210,11 @@ serve(async (req) => {
     // Step 2: Geocode each AI-generated address using French government API
     const geocodedFeatures = [];
     const failedGeocoding = [];
+    const MAX_POINTS = 3000; // Performance limit
 
-    for (const location of aiGeneratedLocations) {
-      console.log(`Processing location: ${location.name}`);
+    for (let i = 0; i < aiGeneratedLocations.length && geocodedFeatures.length < MAX_POINTS; i++) {
+      const location = aiGeneratedLocations[i];
+      console.log(`Processing location ${i + 1}/${aiGeneratedLocations.length}: ${location.name}`);
       
       const geocoded = await geocodeAddress(location.address);
 
@@ -249,6 +250,12 @@ serve(async (req) => {
       } else {
         console.log(`Failed to geocode: ${location.name}`);
         failedGeocoding.push(location.name);
+      }
+
+      // Stop if we've reached the maximum number of points
+      if (geocodedFeatures.length >= MAX_POINTS) {
+        console.log(`Reached maximum limit of ${MAX_POINTS} points`);
+        break;
       }
     }
 
