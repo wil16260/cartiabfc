@@ -153,7 +153,7 @@ const Index = () => {
 
     try {
       console.log('Generating map with AI...');
-      const generateResponse = await supabase.functions.invoke('rag-enhanced-map-generation', {
+      const generateResponse = await supabase.functions.invoke('enhanced-geocoding-map-generation', {
         body: { 
           prompt,
           step: 1,
