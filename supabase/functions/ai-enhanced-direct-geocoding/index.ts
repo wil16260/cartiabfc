@@ -7,9 +7,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+const mistralApiKey = Deno.env.get('MISTRAL_API_KEY');
 
-// AI-enhanced address generation
+// AI-enhanced address generation using Mistral
 async function generateAddressesWithAI(prompt: string): Promise<Array<{name: string, address: string, description: string, category: string}>> {
   const systemPrompt = `Tu es un expert en géographie de la région Bourgogne-Franche-Comté. 
 Ta tâche est de générer une liste EXHAUSTIVE d'adresses précises pour la demande de l'utilisateur.
@@ -44,24 +44,25 @@ Exemple pour gendarmeries:
 IMPORTANT: Réponds UNIQUEMENT avec le JSON, aucun autre texte.`;
 
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
+        'Authorization': `Bearer ${mistralApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-5-2025-08-07',
+        model: 'mistral-large-latest',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: prompt }
         ],
-        max_completion_tokens: 2000,
+        max_tokens: 2000,
+        temperature: 0.3,
       }),
     });
 
     if (!response.ok) {
-      console.error(`OpenAI API error: ${response.status} ${response.statusText}`);
+      console.error(`Mistral API error: ${response.status} ${response.statusText}`);
       return [];
     }
 
@@ -79,7 +80,7 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, aucun autre texte.`;
       return [];
     }
   } catch (error) {
-    console.error('Error calling OpenAI API:', error);
+    console.error('Error calling Mistral API:', error);
     return [];
   }
 }
@@ -131,8 +132,8 @@ serve(async (req) => {
     console.log('Starting AI-enhanced direct geocoding...');
     console.log('User prompt:', prompt);
 
-    if (!openAIApiKey) {
-      throw new Error('OpenAI API key not configured');
+    if (!mistralApiKey) {
+      throw new Error('Mistral API key not configured');
     }
 
     // Initialize Supabase client
@@ -210,7 +211,7 @@ serve(async (req) => {
       metadata: {
         generatedAt: new Date().toISOString(),
         geocodingSource: "api-adresse.data.gouv.fr",
-        aiModel: "gpt-5-2025-08-07",
+        aiModel: "mistral-large-latest",
         totalFeatures: geocodedFeatures.length,
         totalGenerated: aiGeneratedLocations.length,
         successRate: `${Math.round((geocodedFeatures.length / aiGeneratedLocations.length) * 100)}%`,
@@ -244,8 +245,8 @@ serve(async (req) => {
         ai_response: finalGeoJSON,
         success: true,
         created_at: new Date().toISOString(),
-        system_prompt: 'AI-enhanced geocoding with OpenAI + French API',
-        model_name: 'gpt-5-2025-08-07',
+        system_prompt: 'AI-enhanced geocoding with Mistral + French API',
+        model_name: 'mistral-large-latest',
         raw_ai_response: JSON.stringify({
           aiGenerated: aiGeneratedLocations.length,
           geocoded: geocodedFeatures.length,
