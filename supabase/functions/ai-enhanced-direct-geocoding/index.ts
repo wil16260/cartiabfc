@@ -122,6 +122,7 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, aucun autre texte.`;
       return Array.isArray(locations) ? locations : [];
     } catch (parseError) {
       console.error('Failed to parse AI response as JSON:', parseError);
+      console.error('Raw AI content was:', content);
       // Fallback to predefined addresses if available
       if (lowerPrompt.includes('gendarmerie') || lowerPrompt.includes('police')) {
         console.log('Falling back to predefined gendarmeries due to parse error');
@@ -131,6 +132,7 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, aucun autre texte.`;
     }
   } catch (error) {
     console.error('Error calling Mistral API:', error);
+    console.error('API Error details:', error.message);
     // Fallback to predefined addresses if available
     if (lowerPrompt.includes('gendarmerie') || lowerPrompt.includes('police')) {
       console.log('Falling back to predefined gendarmeries due to API error');
@@ -310,10 +312,12 @@ serve(async (req) => {
         created_at: new Date().toISOString(),
         system_prompt: 'AI-enhanced geocoding with Mistral + French API',
         model_name: 'mistral-large-latest',
+        execution_time_ms: Date.now() - new Date().getTime(),
         raw_ai_response: JSON.stringify({
           aiGenerated: aiGeneratedLocations.length,
           geocoded: geocodedFeatures.length,
-          failed: failedGeocoding
+          failed: failedGeocoding,
+          successRate: `${Math.round((geocodedFeatures.length / aiGeneratedLocations.length) * 100)}%`
         })
       });
     } catch (logError) {
@@ -327,11 +331,40 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error in AI-enhanced geocoding:', error);
+    console.error('Full error stack:', error.stack);
+    
+    // Log the error
+    try {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+        auth: { persistSession: false }
+      });
+      
+      await supabaseAdmin.from('ai_generation_logs').insert({
+        user_prompt: (await req.clone().json()).prompt || 'Unknown prompt',
+        ai_response: null,
+        success: false,
+        error_message: error.message,
+        created_at: new Date().toISOString(),
+        system_prompt: 'AI-enhanced geocoding with Mistral + French API',
+        model_name: 'mistral-large-latest',
+        execution_time_ms: null,
+        raw_ai_response: JSON.stringify({
+          error: error.message,
+          stack: error.stack,
+          type: 'ai_enhanced_geocoding_error'
+        })
+      });
+    } catch (logError) {
+      console.error('Failed to log error:', logError);
+    }
     
     return new Response(
       JSON.stringify({ 
         error: error.message,
-        type: 'ai_enhanced_geocoding_error'
+        type: 'ai_enhanced_geocoding_error',
+        details: error.stack || 'No stack trace available'
       }),
       { 
         status: 500, 
