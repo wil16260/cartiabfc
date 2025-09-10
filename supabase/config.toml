@@ -2,7 +2,7 @@ project_id = "flqexbwervowvqltuyrc"
 
 [functions.ai-enhanced-direct-geocoding]
 verify_jwt = false
-timeout = 90
+timeout = 300
 
 [functions.process-gpkg]
 verify_jwt = false

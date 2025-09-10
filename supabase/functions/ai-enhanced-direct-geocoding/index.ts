@@ -213,12 +213,16 @@ Format JSON OBLIGATOIRE:
 IMPORTANT: Réponds UNIQUEMENT avec le JSON, aucun autre texte.`;
 
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 300000); // 300 seconds timeout
+    
     const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${mistralApiKey}`,
         'Content-Type': 'application/json',
       },
+      signal: controller.signal,
       body: JSON.stringify({
         model: 'mistral-large-latest',
         messages: [
@@ -229,6 +233,8 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, aucun autre texte.`;
         temperature: 0.3,
       }),
     });
+    
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       console.error(`Mistral API error: ${response.status} ${response.statusText}`);
@@ -239,7 +245,7 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, aucun autre texte.`;
       }
       if (lowerPrompt.includes('préfecture') || lowerPrompt.includes('prefecture')) {
         console.log('Falling back to predefined prefectures');
-        return await generateAddressesWithAI(prompt); // This will use the fallback logic above
+        return generateBasicFallback(prompt);
       }
       // For other requests, generate a basic fallback based on the prompt
       console.log('Generating basic fallback for:', prompt);
@@ -265,13 +271,19 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, aucun autre texte.`;
       }
       if (lowerPrompt.includes('préfecture') || lowerPrompt.includes('prefecture')) {
         console.log('Falling back to predefined prefectures due to parse error');
-        return await generateAddressesWithAI(prompt); // This will use the fallback logic above
+        return generateBasicFallback(prompt);
       }
       return generateBasicFallback(prompt);
     }
   } catch (error) {
     console.error('Error calling Mistral API:', error);
     console.error('API Error details:', error.message);
+    
+    // Handle timeout specifically
+    if (error.name === 'AbortError') {
+      console.error('Mistral API request timed out after 300 seconds');
+    }
+    
     // Enhanced fallback logic for API errors
     if (lowerPrompt.includes('gendarmerie') || lowerPrompt.includes('police')) {
       console.log('Falling back to predefined gendarmeries due to API error');
@@ -279,7 +291,7 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, aucun autre texte.`;
     }
     if (lowerPrompt.includes('préfecture') || lowerPrompt.includes('prefecture')) {
       console.log('Falling back to predefined prefectures due to API error');
-      return await generateAddressesWithAI(prompt); // This will use the fallback logic above
+      return generateBasicFallback(prompt);
     }
     return generateBasicFallback(prompt);
   }
@@ -312,8 +324,13 @@ async function geocodeAddress(address: string): Promise<{latitude: number, longi
   try {
     console.log(`Geocoding address: ${address}`);
     
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 seconds timeout for geocoding
+    
     const url = `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(address)}&limit=1`;
-    const response = await fetch(url);
+    const response = await fetch(url, { signal: controller.signal });
+    
+    clearTimeout(timeoutId);
     
     if (!response.ok) {
       console.error(`Geocoding API error: ${response.status}`);
@@ -339,6 +356,12 @@ async function geocodeAddress(address: string): Promise<{latitude: number, longi
     return null;
   } catch (error) {
     console.error(`Error geocoding address ${address}:`, error);
+    
+    // Handle timeout specifically
+    if (error.name === 'AbortError') {
+      console.error(`Geocoding request timed out for address: ${address}`);
+    }
+    
     return null;
   }
 }
@@ -349,12 +372,13 @@ serve(async (req) => {
   }
 
   try {
-    const { prompt } = await req.json();
-    
     console.log('Starting AI-enhanced direct geocoding...');
+    const { prompt, step, dataLevel, recommendedMapType, batch = 1, maxPerBatch = 50, excludeNames = [] } = await req.json();
     console.log('User prompt:', prompt);
+    console.log('Batch parameters:', { batch, maxPerBatch, excludeNames: excludeNames?.length || 0 });
 
     if (!mistralApiKey) {
+      console.error('Mistral API key not configured');
       throw new Error('Mistral API key not configured');
     }
 
