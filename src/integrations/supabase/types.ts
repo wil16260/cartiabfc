@@ -346,7 +346,30 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      ai_config_public: {
+        Row: {
+          created_at: string | null
+          has_api_key: boolean | null
+          id: string | null
+          is_active: boolean | null
+          model_name: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          has_api_key?: never
+          id?: string | null
+          is_active?: boolean | null
+          model_name?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          has_api_key?: never
+          id?: string | null
+          is_active?: boolean | null
+          model_name?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       debug_current_user: {
