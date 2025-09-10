@@ -53,7 +53,7 @@ async function loadCommuneData(): Promise<Array<{nom: string, population: number
 }
 
 // AI-enhanced address generation using Mistral with population-based categorization
-async function generateAddressesWithAI(prompt: string): Promise<Array<{name: string, address: string, description: string, category: string, populationTier?: string}>> {
+async function generateAddressesWithAI(prompt: string, batch = 1, maxPerBatch = 50, excludeNames: string[] = []): Promise<Array<{name: string, address: string, description: string, category: string, populationTier?: string}>> {
   const lowerPrompt = prompt.toLowerCase();
   
   // For gendarmerie requests, use population-based smart generation
@@ -76,51 +76,79 @@ async function generateAddressesWithAI(prompt: string): Promise<Array<{name: str
     
     const gendarmeries = [];
     
-    // Large cities - main gendarmeries (take top 15)
-    largeCities.slice(0, 15).forEach(city => {
-      gendarmeries.push({
-        name: `Gendarmerie ${city.nom}`,
-        address: `Place de la République, ${city.code_postal} ${city.nom}`,
-        description: `Brigade territoriale principale`,
-        category: "Forces de l'ordre",
-        populationTier: "large"
-      });
+    // Calculate batch offsets and sizes based on population tiers
+    const batchOffset = (batch - 1) * maxPerBatch;
+    const actualBatchSize = Math.min(maxPerBatch, Math.floor(maxPerBatch * 0.6)); // Leave room for variation
+    
+    console.log(`Generating batch ${batch} with offset ${batchOffset}, targeting ${actualBatchSize} locations`);
+    
+    // Distribute across population tiers based on realistic proportions
+    const largeCount = Math.min(Math.floor(actualBatchSize * 0.3), largeCities.length - Math.floor(batchOffset * 0.3));
+    const mediumCount = Math.min(Math.floor(actualBatchSize * 0.4), mediumCities.length - Math.floor(batchOffset * 0.4));
+    const smallCount = Math.min(Math.floor(actualBatchSize * 0.2), smallCities.length - Math.floor(batchOffset * 0.2));
+    const tinyCount = Math.min(Math.floor(actualBatchSize * 0.1), tinyCities.length - Math.floor(batchOffset * 0.1));
+    
+    // Large cities - main gendarmeries
+    const largeStart = Math.floor(batchOffset * 0.3);
+    largeCities.slice(largeStart, largeStart + largeCount).forEach(city => {
+      const name = `Gendarmerie ${city.nom}`;
+      if (!excludeNames.includes(name)) {
+        gendarmeries.push({
+          name,
+          address: `Place de la République, ${city.code_postal} ${city.nom}`,
+          description: `Brigade territoriale principale`,
+          category: "Forces de l'ordre",
+          populationTier: "large"
+        });
+      }
     });
     
-    // Medium cities - secondary gendarmeries (take top 20)
-    mediumCities.slice(0, 20).forEach(city => {
-      gendarmeries.push({
-        name: `Gendarmerie ${city.nom}`,
-        address: `Rue de la Gendarmerie, ${city.code_postal} ${city.nom}`,
-        description: `Brigade territoriale`,
-        category: "Forces de l'ordre",
-        populationTier: "medium"
-      });
+    // Medium cities - secondary gendarmeries
+    const mediumStart = Math.floor(batchOffset * 0.4);
+    mediumCities.slice(mediumStart, mediumStart + mediumCount).forEach(city => {
+      const name = `Gendarmerie ${city.nom}`;
+      if (!excludeNames.includes(name)) {
+        gendarmeries.push({
+          name,
+          address: `Rue de la Gendarmerie, ${city.code_postal} ${city.nom}`,
+          description: `Brigade territoriale`,
+          category: "Forces de l'ordre",
+          populationTier: "medium"
+        });
+      }
     });
     
-    // Small cities - local gendarmeries (take top 25)
-    smallCities.slice(0, 25).forEach(city => {
-      gendarmeries.push({
-        name: `Gendarmerie ${city.nom}`,
-        address: `Avenue de la Mairie, ${city.code_postal} ${city.nom}`,
-        description: `Poste de gendarmerie`,
-        category: "Forces de l'ordre",
-        populationTier: "small"
-      });
+    // Small cities - local brigades
+    const smallStart = Math.floor(batchOffset * 0.2);
+    smallCities.slice(smallStart, smallStart + smallCount).forEach(city => {
+      const name = `Gendarmerie ${city.nom}`;
+      if (!excludeNames.includes(name)) {
+        gendarmeries.push({
+          name,
+          address: `Avenue de la Paix, ${city.code_postal} ${city.nom}`,
+          description: `Brigade de proximité`,
+          category: "Forces de l'ordre",
+          populationTier: "small"
+        });
+      }
     });
     
-    // Tiny cities - community posts (take top 30)
-    tinyCities.slice(0, 30).forEach(city => {
-      gendarmeries.push({
-        name: `Poste Gendarmerie ${city.nom}`,
-        address: `Place du Village, ${city.code_postal} ${city.nom}`,
-        description: `Poste communautaire`,
-        category: "Forces de l'ordre",
-        populationTier: "tiny"
-      });
+    // Tiny cities - community brigades
+    const tinyStart = Math.floor(batchOffset * 0.1);
+    tinyCities.slice(tinyStart, tinyStart + tinyCount).forEach(city => {
+      const name = `Gendarmerie ${city.nom}`;
+      if (!excludeNames.includes(name)) {
+        gendarmeries.push({
+          name,
+          address: `Rue de la Mairie, ${city.code_postal} ${city.nom}`,
+          description: `Brigade communautaire`,
+          category: "Forces de l'ordre",
+          populationTier: "tiny"
+        });
+      }
     });
     
-    console.log(`Generated ${gendarmeries.length} gendarmeries across population tiers`);
+    console.log(`AI generated ${gendarmeries.length} locations for batch ${batch}`);
     return gendarmeries;
   }
 
@@ -463,6 +491,9 @@ serve(async (req) => {
         prompt: prompt,
         failedGeocoding: failedGeocoding,
         processingMethod: "population-based",
+        batch: batch,
+        maxPerBatch: maxPerBatch,
+        excludedCount: excludeNames.length,
         populationTiers: {
           large: populationTiers.large.length,
           medium: populationTiers.medium.length,

@@ -24,6 +24,9 @@ const Index = () => {
   const [mapConfig, setMapConfig] = useState({ dataLabel: "Données" });
   const [isEditingDataLabel, setIsEditingDataLabel] = useState(false);
   const [tempDataLabel, setTempDataLabel] = useState(mapConfig.dataLabel);
+  const [currentBatch, setCurrentBatch] = useState(1);
+  const [generatedNames, setGeneratedNames] = useState<string[]>([]);
+  const [currentPrompt, setCurrentPrompt] = useState("");
   const [mapLayers, setMapLayers] = useState<Array<{
     id: string;
     name: string;
@@ -146,19 +149,26 @@ const Index = () => {
     }
   };
 
-  const handleAIGeneration = async (prompt: string) => {
+  const handleAIGeneration = async (prompt: string, batch = 1, excludeNames: string[] = []) => {
     setIsGenerating(true);
     setShowProgress(true);
     setShowAIAnalysis(false);
+    
+    // Update current batch and prompt tracking
+    setCurrentBatch(batch);
+    setCurrentPrompt(prompt);
 
     try {
-      console.log('Generating map with AI...');
+      console.log(`Generating map with AI - batch ${batch}...`);
       const generateResponse = await supabase.functions.invoke('ai-enhanced-direct-geocoding', {
         body: { 
           prompt,
           step: 1,
           dataLevel: 'communes',
-          recommendedMapType: 'geocodage'
+          recommendedMapType: 'geocodage',
+          batch,
+          maxPerBatch: 50,
+          excludeNames
         }
       });
 
@@ -175,20 +185,24 @@ const Index = () => {
         
         setGeneratedMapData(geojsonData);
         
+        // Extract generated names for future exclusion
+        const newNames = geojsonData.features?.map((f: any) => f.properties?.name).filter(Boolean) || [];
+        setGeneratedNames(prev => [...prev, ...newNames]);
+
         // Add AI layer to map
         const aiLayer = {
           id: `ai_${Date.now()}`,
-          name: `IA: ${prompt}`,
+          name: `IA: ${prompt} (Batch ${batch})`,
           enabled: true,
-          description: `Carte générée par IA`,
+          description: `Carte générée par IA - Batch ${batch}`,
           type: 'ai' as const,
-          color: '#f59e0b',
+          color: batch === 1 ? '#f59e0b' : batch === 2 ? '#10b981' : batch === 3 ? '#f97316' : '#8b5cf6',
           opacity: 0.8,
           data: geojsonData
         };
         
         setMapLayers(prev => [...prev, aiLayer]);
-        toast.success(`Carte générée avec succès! ${geojsonData.features?.length || 0} éléments créés`);
+        toast.success(`Batch ${batch} généré avec succès! ${geojsonData.features?.length || 0} nouveaux éléments créés`);
       } else {
         toast.error("L'IA n'a pas généré de données géographiques valides");
       }
@@ -220,6 +234,9 @@ const Index = () => {
             <SearchBar 
               onSearch={handleAIGeneration} 
               isLoading={isGenerating}
+              showBatchControls={generatedNames.length > 0}
+              currentBatch={currentBatch}
+              generatedNames={generatedNames}
             />
           </div>
           

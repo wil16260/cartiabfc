@@ -8,12 +8,22 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
 interface SearchBarProps {
-  onSearch: (prompt: string) => void;
+  onSearch: (prompt: string, batch?: number, excludeNames?: string[]) => void;
   isLoading?: boolean;
+  showBatchControls?: boolean;
+  currentBatch?: number;
+  generatedNames?: string[];
 }
 
-const SearchBar = ({ onSearch, isLoading = false }: SearchBarProps) => {
+const SearchBar = ({ 
+  onSearch, 
+  isLoading = false, 
+  showBatchControls = false,
+  currentBatch = 1,
+  generatedNames = []
+}: SearchBarProps) => {
   const [prompt, setPrompt] = useState("");
+  const [batchNumber, setBatchNumber] = useState(currentBatch);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,7 +31,17 @@ const SearchBar = ({ onSearch, isLoading = false }: SearchBarProps) => {
       toast.error("Veuillez entrer un prompt pour générer votre carte");
       return;
     }
-    onSearch(prompt.trim());
+    onSearch(prompt.trim(), batchNumber, generatedNames);
+  };
+
+  const handleNextBatch = () => {
+    if (!prompt.trim()) {
+      toast.error("Veuillez entrer un prompt pour générer votre carte");
+      return;
+    }
+    const nextBatch = batchNumber + 1;
+    setBatchNumber(nextBatch);
+    onSearch(prompt.trim(), nextBatch, generatedNames);
   };
 
   return (
@@ -52,6 +72,29 @@ const SearchBar = ({ onSearch, isLoading = false }: SearchBarProps) => {
           </Button>
         </div>
       </form>
+      
+      {showBatchControls && generatedNames.length > 0 && (
+        <div className="mt-4 p-4 bg-secondary/10 rounded-lg border">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium">
+              Batch {batchNumber} • {generatedNames.length} points générés
+            </span>
+            <Button
+              onClick={handleNextBatch}
+              disabled={isLoading}
+              variant="outline"
+              size="sm"
+              className="gap-2"
+            >
+              <Sparkles className="h-4 w-4" />
+              Générer plus de points (Batch {batchNumber + 1})
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Cliquez sur "Générer plus de points" pour obtenir d'autres emplacements dans la région
+          </p>
+        </div>
+      )}
     </div>
   );
 };
