@@ -105,7 +105,7 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, aucun autre texte.`;
           { role: 'system', content: systemPrompt },
           { role: 'user', content: prompt }
         ],
-        max_tokens: 8000,
+        max_tokens: 4000,
         temperature: 0.3,
       }),
     });
@@ -253,7 +253,7 @@ serve(async (req) => {
     // Step 2: Geocode each AI-generated address using French government API
     const geocodedFeatures = [];
     const failedGeocoding = [];
-    const MAX_POINTS = 3000; // Performance limit
+    const MAX_POINTS = 500; // Optimized performance limit to avoid timeouts
 
     if (aiGeneratedLocations.length === 0) {
       console.log('No addresses generated, using emergency fallback');
