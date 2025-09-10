@@ -250,15 +250,20 @@ serve(async (req) => {
     console.log('Generating addresses with AI...');
     const aiGeneratedLocations = await generateAddressesWithAI(prompt);
     
+    // Step 2: Geocode each AI-generated address using French government API
+    const geocodedFeatures = [];
+    const failedGeocoding = [];
+    const MAX_POINTS = 3000; // Performance limit
+
     if (aiGeneratedLocations.length === 0) {
       console.log('No addresses generated, using emergency fallback');
-      // Don't throw error, use emergency fallback instead
       const emergencyFallback = generateBasicFallback(prompt);
       if (emergencyFallback.length === 0) {
         throw new Error('Unable to generate any addresses for this request');
       }
       console.log(`Using emergency fallback with ${emergencyFallback.length} locations`);
-      // Continue with emergency fallback
+      
+      // Process emergency fallback
       for (let i = 0; i < emergencyFallback.length; i++) {
         const location = emergencyFallback[i];
         console.log(`Processing emergency fallback ${i + 1}/${emergencyFallback.length}: ${location.name}`);
@@ -286,53 +291,48 @@ serve(async (req) => {
         }
       }
     } else {
-    
-    console.log(`AI generated ${aiGeneratedLocations.length} locations`);
+      console.log(`AI generated ${aiGeneratedLocations.length} locations`);
 
-      // Step 2: Geocode each AI-generated address using French government API
-      const geocodedFeatures = [];
-      const failedGeocoding = [];
-      const MAX_POINTS = 3000; // Performance limit
-
+      // Process AI-generated addresses
       for (let i = 0; i < aiGeneratedLocations.length && geocodedFeatures.length < MAX_POINTS; i++) {
-      const location = aiGeneratedLocations[i];
-      console.log(`Processing location ${i + 1}/${aiGeneratedLocations.length}: ${location.name}`);
-      
-      const geocoded = await geocodeAddress(location.address);
+        const location = aiGeneratedLocations[i];
+        console.log(`Processing location ${i + 1}/${aiGeneratedLocations.length}: ${location.name}`);
+        
+        const geocoded = await geocodeAddress(location.address);
 
-      if (geocoded) {
-        // Verify coordinates are in France (approximate bounds)
-        if (geocoded.latitude >= 41.0 && geocoded.latitude <= 51.0 && 
-            geocoded.longitude >= -5.0 && geocoded.longitude <= 10.0) {
-          
-          const feature = {
-            type: "Feature",
-            geometry: {
-              type: "Point",
-              coordinates: [geocoded.longitude, geocoded.latitude]
-            },
-            properties: {
-              name: location.name,
-              description: location.description,
-              category: location.category,
-              address: geocoded.formatted_address,
-              originalAddress: location.address,
-              geocoded: true,
-              source: "api-adresse.data.gouv.fr",
-              aiGenerated: true
-            }
-          };
+        if (geocoded) {
+          // Verify coordinates are in France (approximate bounds)
+          if (geocoded.latitude >= 41.0 && geocoded.latitude <= 51.0 && 
+              geocoded.longitude >= -5.0 && geocoded.longitude <= 10.0) {
+            
+            const feature = {
+              type: "Feature",
+              geometry: {
+                type: "Point",
+                coordinates: [geocoded.longitude, geocoded.latitude]
+              },
+              properties: {
+                name: location.name,
+                description: location.description,
+                category: location.category,
+                address: geocoded.formatted_address,
+                originalAddress: location.address,
+                geocoded: true,
+                source: "api-adresse.data.gouv.fr",
+                aiGenerated: true
+              }
+            };
 
-          geocodedFeatures.push(feature);
-          console.log(`Successfully geocoded: ${location.name} at [${geocoded.longitude}, ${geocoded.latitude}]`);
+            geocodedFeatures.push(feature);
+            console.log(`Successfully geocoded: ${location.name} at [${geocoded.longitude}, ${geocoded.latitude}]`);
+          } else {
+            console.log(`Location outside France bounds: ${location.name}`);
+            failedGeocoding.push(location.name);
+          }
         } else {
-          console.log(`Location outside France bounds: ${location.name}`);
+          console.log(`Failed to geocode: ${location.name}`);
           failedGeocoding.push(location.name);
         }
-      } else {
-        console.log(`Failed to geocode: ${location.name}`);
-        failedGeocoding.push(location.name);
-      }
 
         // Stop if we've reached the maximum number of points
         if (geocodedFeatures.length >= MAX_POINTS) {
@@ -342,7 +342,7 @@ serve(async (req) => {
       }
     }
 
-    console.log(`Successfully geocoded ${allGeocodedFeatures.length} out of ${aiGeneratedLocations.length} locations`);
+    console.log(`Successfully geocoded ${geocodedFeatures.length} out of ${aiGeneratedLocations.length} locations`);
     if (failedGeocoding.length > 0) {
       console.log(`Failed geocoding for: ${failedGeocoding.join(', ')}`);
     }
@@ -351,25 +351,23 @@ serve(async (req) => {
     const finalGeoJSON = {
       type: "FeatureCollection",
       title: `Carte: ${prompt}`,
-      description: `Carte générée avec IA et géocodage français en batches: "${prompt}"`,
+      description: `Carte générée avec IA et géocodage français: "${prompt}"`,
       metadata: {
         generatedAt: new Date().toISOString(),
         geocodingSource: "api-adresse.data.gouv.fr",
         aiModel: "mistral-large-latest",
-        totalFeatures: allGeocodedFeatures.length,
+        totalFeatures: geocodedFeatures.length,
         totalGenerated: aiGeneratedLocations.length,
-        successRate: `${Math.round((allGeocodedFeatures.length / aiGeneratedLocations.length) * 100)}%`,
+        successRate: aiGeneratedLocations.length > 0 ? `${Math.round((geocodedFeatures.length / aiGeneratedLocations.length) * 100)}%` : '0%',
         region: "France",
         prompt: prompt,
         failedGeocoding: failedGeocoding,
-        processingMethod: "batch",
-        batchSize: BATCH_SIZE,
-        totalBatches: Math.ceil(aiGeneratedLocations.length / BATCH_SIZE)
+        processingMethod: "direct"
       },
-      features: allGeocodedFeatures
+      features: geocodedFeatures
     };
 
-    console.log(`Generated merged GeoJSON with ${allGeocodedFeatures.length} geocoded features from all batches`);
+    console.log(`Generated GeoJSON with ${geocodedFeatures.length} geocoded features`);
 
     // Save to database
     try {
@@ -397,11 +395,10 @@ serve(async (req) => {
         execution_time_ms: Date.now() - new Date().getTime(),
         raw_ai_response: JSON.stringify({
           aiGenerated: aiGeneratedLocations.length,
-          geocoded: allGeocodedFeatures.length,
+          geocoded: geocodedFeatures.length,
           failed: failedGeocoding,
-          successRate: `${Math.round((allGeocodedFeatures.length / aiGeneratedLocations.length) * 100)}%`,
-          batchProcessing: true,
-          batchSize: BATCH_SIZE
+          successRate: aiGeneratedLocations.length > 0 ? `${Math.round((geocodedFeatures.length / aiGeneratedLocations.length) * 100)}%` : '0%',
+          processingMethod: "direct"
         })
       });
     } catch (logError) {
