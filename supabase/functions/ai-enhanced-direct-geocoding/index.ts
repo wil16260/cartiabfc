@@ -23,13 +23,105 @@ const fallbackAddresses = {
   ]
 };
 
-// AI-enhanced address generation using Mistral with fallback
-async function generateAddressesWithAI(prompt: string): Promise<Array<{name: string, address: string, description: string, category: string}>> {
-  // Check if we have a fallback for this type of request
+// Load commune data for population-based categorization
+async function loadCommuneData(): Promise<Array<{nom: string, population: number, code_postal: string, code_departement: string}>> {
+  try {
+    const response = await fetch('https://cf145ec7-08c8-4351-9e7a-6cbb944b37a4.lovableproject.com/data/com_bfc3.json');
+    const text = await response.text();
+    
+    // Parse JSONL format (each line is a JSON object)
+    const communes = text.trim().split('\n').map(line => {
+      try {
+        const feature = JSON.parse(line);
+        return {
+          nom: feature.properties.nom,
+          population: feature.properties.population || 0,
+          code_postal: feature.properties.code_postal,
+          code_departement: feature.properties.code_departement
+        };
+      } catch (e) {
+        return null;
+      }
+    }).filter(Boolean);
+    
+    console.log(`Loaded ${communes.length} communes from BFC data`);
+    return communes;
+  } catch (error) {
+    console.error('Error loading commune data:', error);
+    return [];
+  }
+}
+
+// AI-enhanced address generation using Mistral with population-based categorization
+async function generateAddressesWithAI(prompt: string): Promise<Array<{name: string, address: string, description: string, category: string, populationTier?: string}>> {
   const lowerPrompt = prompt.toLowerCase();
+  
+  // For gendarmerie requests, use population-based smart generation
   if (lowerPrompt.includes('gendarmerie') || lowerPrompt.includes('police')) {
-    console.log('Using fallback addresses for gendarmeries');
-    return fallbackAddresses.gendarmeries;
+    console.log('Using population-based smart generation for gendarmeries');
+    
+    const communes = await loadCommuneData();
+    if (communes.length === 0) {
+      console.log('Fallback to static gendarmeries list');
+      return fallbackAddresses.gendarmeries;
+    }
+    
+    // Categorize communes by population
+    const largeCities = communes.filter(c => c.population > 5000).sort((a, b) => b.population - a.population);
+    const mediumCities = communes.filter(c => c.population >= 1000 && c.population <= 5000).sort((a, b) => b.population - a.population);
+    const smallCities = communes.filter(c => c.population >= 500 && c.population < 1000).sort((a, b) => b.population - a.population);
+    const tinyCities = communes.filter(c => c.population < 500 && c.population > 50).sort((a, b) => b.population - a.population);
+    
+    console.log(`Population tiers: Large(>5k): ${largeCities.length}, Medium(1k-5k): ${mediumCities.length}, Small(500-1k): ${smallCities.length}, Tiny(<500): ${tinyCities.length}`);
+    
+    const gendarmeries = [];
+    
+    // Large cities - main gendarmeries (take top 15)
+    largeCities.slice(0, 15).forEach(city => {
+      gendarmeries.push({
+        name: `Gendarmerie ${city.nom}`,
+        address: `Place de la République, ${city.code_postal} ${city.nom}`,
+        description: `Brigade territoriale principale`,
+        category: "Forces de l'ordre",
+        populationTier: "large"
+      });
+    });
+    
+    // Medium cities - secondary gendarmeries (take top 20)
+    mediumCities.slice(0, 20).forEach(city => {
+      gendarmeries.push({
+        name: `Gendarmerie ${city.nom}`,
+        address: `Rue de la Gendarmerie, ${city.code_postal} ${city.nom}`,
+        description: `Brigade territoriale`,
+        category: "Forces de l'ordre",
+        populationTier: "medium"
+      });
+    });
+    
+    // Small cities - local gendarmeries (take top 25)
+    smallCities.slice(0, 25).forEach(city => {
+      gendarmeries.push({
+        name: `Gendarmerie ${city.nom}`,
+        address: `Avenue de la Mairie, ${city.code_postal} ${city.nom}`,
+        description: `Poste de gendarmerie`,
+        category: "Forces de l'ordre",
+        populationTier: "small"
+      });
+    });
+    
+    // Tiny cities - community posts (take top 30)
+    tinyCities.slice(0, 30).forEach(city => {
+      gendarmeries.push({
+        name: `Poste Gendarmerie ${city.nom}`,
+        address: `Place du Village, ${city.code_postal} ${city.nom}`,
+        description: `Poste communautaire`,
+        category: "Forces de l'ordre",
+        populationTier: "tiny"
+      });
+    });
+    
+    console.log(`Generated ${gendarmeries.length} gendarmeries across population tiers`);
+    return gendarmeries;
   }
 
   // Check if Mistral API key is available
@@ -253,7 +345,8 @@ serve(async (req) => {
     // Step 2: Geocode each AI-generated address using French government API
     const geocodedFeatures = [];
     const failedGeocoding = [];
-    const MAX_POINTS = 500; // Optimized performance limit to avoid timeouts
+    const MAX_POINTS = 100; // Reduced for better performance with population tiers
+    const populationTiers = { large: [], medium: [], small: [], tiny: [] };
 
     if (aiGeneratedLocations.length === 0) {
       console.log('No addresses generated, using emergency fallback');
@@ -293,10 +386,10 @@ serve(async (req) => {
     } else {
       console.log(`AI generated ${aiGeneratedLocations.length} locations`);
 
-      // Process AI-generated addresses
+      // Process AI-generated addresses with population tier tracking
       for (let i = 0; i < aiGeneratedLocations.length && geocodedFeatures.length < MAX_POINTS; i++) {
         const location = aiGeneratedLocations[i];
-        console.log(`Processing location ${i + 1}/${aiGeneratedLocations.length}: ${location.name}`);
+        console.log(`Processing location ${i + 1}/${aiGeneratedLocations.length}: ${location.name} (${location.populationTier || 'unknown'})`);
         
         const geocoded = await geocodeAddress(location.address);
 
@@ -319,12 +412,19 @@ serve(async (req) => {
                 originalAddress: location.address,
                 geocoded: true,
                 source: "api-adresse.data.gouv.fr",
-                aiGenerated: true
+                aiGenerated: true,
+                populationTier: location.populationTier || 'unknown'
               }
             };
 
             geocodedFeatures.push(feature);
-            console.log(`Successfully geocoded: ${location.name} at [${geocoded.longitude}, ${geocoded.latitude}]`);
+            
+            // Group by population tier
+            if (location.populationTier && populationTiers[location.populationTier]) {
+              populationTiers[location.populationTier].push(feature);
+            }
+            
+            console.log(`Successfully geocoded: ${location.name} at [${geocoded.longitude}, ${geocoded.latitude}] (tier: ${location.populationTier})`);
           } else {
             console.log(`Location outside France bounds: ${location.name}`);
             failedGeocoding.push(location.name);
@@ -347,11 +447,11 @@ serve(async (req) => {
       console.log(`Failed geocoding for: ${failedGeocoding.join(', ')}`);
     }
 
-    // Create final merged GeoJSON
+    // Create final merged GeoJSON with population tier information
     const finalGeoJSON = {
       type: "FeatureCollection",
       title: `Carte: ${prompt}`,
-      description: `Carte générée avec IA et géocodage français: "${prompt}"`,
+      description: `Carte générée avec IA et géocodage français basé sur les populations: "${prompt}"`,
       metadata: {
         generatedAt: new Date().toISOString(),
         geocodingSource: "api-adresse.data.gouv.fr",
@@ -359,10 +459,16 @@ serve(async (req) => {
         totalFeatures: geocodedFeatures.length,
         totalGenerated: aiGeneratedLocations.length,
         successRate: aiGeneratedLocations.length > 0 ? `${Math.round((geocodedFeatures.length / aiGeneratedLocations.length) * 100)}%` : '0%',
-        region: "France",
+        region: "Bourgogne-Franche-Comté",
         prompt: prompt,
         failedGeocoding: failedGeocoding,
-        processingMethod: "direct"
+        processingMethod: "population-based",
+        populationTiers: {
+          large: populationTiers.large.length,
+          medium: populationTiers.medium.length,
+          small: populationTiers.small.length,
+          tiny: populationTiers.tiny.length
+        }
       },
       features: geocodedFeatures
     };
