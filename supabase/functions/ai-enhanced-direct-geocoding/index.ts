@@ -371,9 +371,11 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  let requestBody: any = {};
   try {
     console.log('Starting AI-enhanced direct geocoding...');
-    const { prompt, step, dataLevel, recommendedMapType, batch = 1, maxPerBatch = 50, excludeNames = [] } = await req.json();
+    requestBody = await req.json();
+    const { prompt, step, dataLevel, recommendedMapType, batch = 1, maxPerBatch = 50, excludeNames = [] } = requestBody;
     console.log('User prompt:', prompt);
     console.log('Batch parameters:', { batch, maxPerBatch, excludeNames: excludeNames?.length || 0 });
 
@@ -392,7 +394,7 @@ serve(async (req) => {
 
     // Step 1: Use AI to generate comprehensive addresses
     console.log('Generating addresses with AI...');
-    const aiGeneratedLocations = await generateAddressesWithAI(prompt);
+    const aiGeneratedLocations = await generateAddressesWithAI(prompt, batch, maxPerBatch, excludeNames);
     
     // Step 2: Geocode each AI-generated address using French government API
     const geocodedFeatures = [];
@@ -584,7 +586,7 @@ serve(async (req) => {
       });
       
       await supabaseAdmin.from('ai_generation_logs').insert({
-        user_prompt: (await req.clone().json()).prompt || 'Unknown prompt',
+        user_prompt: requestBody?.prompt || 'Unknown prompt',
         ai_response: null,
         success: false,
         error_message: error.message,
